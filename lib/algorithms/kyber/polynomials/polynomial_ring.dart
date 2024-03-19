@@ -271,7 +271,6 @@ class PolynomialRing {
     return PolynomialRing.from(resultingCoefficients, n, q);
   }
 
-  // TODO: IMPLEMENT
   Uint8List serialize(int w) {
     return _encode(coefficients, w);
   }
