@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:hashlib/hashlib.dart';
 
 import '../abstractions/pke_private_key.dart';
