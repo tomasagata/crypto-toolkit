@@ -83,13 +83,13 @@ class KyberPKE {
 
     PolynomialMatrix u = A.transpose()
         .multiply(r)
-        .add(e1);
+        .plus(e1);
 
     PolynomialRing v = t.transpose() // 1xn
         .multiply(r) // nx1
         .toRing() // 1x1 -> Unwraps into single PolynomialRing
-        .add(e2)
-        .add(msgPolynomial);
+        .plus(e2)
+        .plus(msgPolynomial);
 
     return PKECypher(u: u, v: v, du: du, dv: dv);
   }

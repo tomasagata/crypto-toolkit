@@ -33,10 +33,10 @@ class PKEPublicKey {
   // ------------ PUBLIC API ------------
 
   Uint8List serialize() {
-    var result = Uint8List(0);
-    result.addAll(t.serialize(12));
-    result.addAll(rho);
-    return result;
+    var result = BytesBuilder();
+    result.add(t.serialize(12));
+    result.add(rho);
+    return result.toBytes();
   }
 
 }

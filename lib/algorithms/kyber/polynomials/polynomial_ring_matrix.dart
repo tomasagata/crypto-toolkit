@@ -37,7 +37,7 @@ class PolynomialMatrix {
     for (int i=0; i<rows; i++) {
       var row = <PolynomialRing>[];
       for (int j=0; j<columns; j++) {
-        row.add(elements[i]);
+        row.add(elements[(columns * i) + j]);
       }
       matrix.add(row);
     }
@@ -46,10 +46,10 @@ class PolynomialMatrix {
 
   /// Creates a vector from a list of polynomials
   factory PolynomialMatrix.vector(List<PolynomialRing> elements) {
-    List<List<PolynomialRing>> matrix = [
-      List.generate(elements.length, (i) => elements[i])
-    ];
-    return PolynomialMatrix._internal(matrix);
+    // List<List<PolynomialRing>> matrix = [
+    //   List.generate(elements.length, (i) => elements[i])
+    // ];
+    return PolynomialMatrix.fromList(elements, elements.length, 1);
   }
 
   factory PolynomialMatrix.deserialize(
@@ -150,14 +150,14 @@ class PolynomialMatrix {
 
   // --------- PUBLIC METHODS ---------
 
-  PolynomialMatrix add(PolynomialMatrix other) {
+  PolynomialMatrix plus(PolynomialMatrix other) {
     if (rows != other.rows || columns != other.columns) {
       throw ArgumentError("Matrices must have the same dimensions for addition.");
     }
 
     List<List<PolynomialRing>> result = List.generate(rows, (i) {
       return List.generate(columns, (j) {
-        return elementMatrix[i][j].add(other.elementMatrix[i][j]);
+        return elementMatrix[i][j].plus(other.elementMatrix[i][j]);
       });
     });
 
@@ -173,19 +173,17 @@ class PolynomialMatrix {
       return this;
     }
 
-    List<List<PolynomialRing>> result = List.generate(rows, (i) {
-      return List.generate(other.columns, (j) {
-        PolynomialRing sum = elementMatrix[i][0].multiply( other.elementMatrix[0][j] );
-        for (int k = 1; k < columns; k++) {
-          sum = sum.add(
-              elementMatrix[i][k].multiply( other.elementMatrix[k][j] )
-          );
+    List<PolynomialRing> polynomials = [];
+    for (var i=0; i<rows; i++) {
+      for (var j=0; j<other.columns; j++) {
+        PolynomialRing sum = elementMatrix[i][0].multiply(other.elementMatrix[0][j]);
+        for (var k=1; k<columns; k++) {
+          sum = sum.plus(elementMatrix[i][k].multiply(other.elementMatrix[k][j]));
         }
-        return sum;
-      });
-    });
-
-    return PolynomialMatrix.fromSquareMatrix(result);
+        polynomials.add(sum);
+      }
+    }
+    return PolynomialMatrix.fromList(polynomials, rows, other.columns);
   }
 
   PolynomialMatrix transpose() {
@@ -228,13 +226,27 @@ class PolynomialMatrix {
 
 
   Uint8List serialize(int d) {
-    var result = Uint8List(0);
+    var result = BytesBuilder();
     for (var vector in elementMatrix){
       for (var poly in vector) {
-        result.addAll(poly.serialize(d));
+        result.add(poly.serialize(d));
       }
     }
-    return result;
+    return result.toBytes();
+  }
+
+  @override
+  String toString() {
+    var matrix = "[\n";
+    for (var row in elementMatrix) {
+      matrix += "\t[\n";
+      for (var poly in row) {
+        matrix += "\t\t${poly.toString()}\n";
+      }
+      matrix += "\t],\n";
+    }
+    matrix += "]\n";
+    return matrix;
   }
 
 }

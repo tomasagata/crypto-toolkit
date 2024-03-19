@@ -46,11 +46,11 @@ class PKECypher {
     var serializedV = u.compress(dv).serialize(dv);
 
     // SERIALIZED_CYPHER = SERIALIZED_U || SERIALIZED_V
-    var serializedCypher = Uint8List(serializedU.length + serializedV.length);
-    serializedCypher.addAll(serializedU);
-    serializedCypher.addAll(serializedV);
+    var serializedCypher = BytesBuilder();
+    serializedCypher.add(serializedU);
+    serializedCypher.add(serializedV);
 
-    return serializedCypher;
+    return serializedCypher.toBytes();
   }
 
 }

@@ -40,11 +40,11 @@ class KeyGenerator {
 
   /// Sample Documentation
   Uint8List _xof(Uint8List seed, int j, int i) {
-    Uint8List message = Uint8List.fromList(seed);
-    message.add(j);
-    message.add(i);
-    String messageString = ascii.decode(message);
-    return shake128.of(1344).string(messageString, ascii).bytes;
+    BytesBuilder message = BytesBuilder();
+    message.add(seed);
+    message.addByte(j);
+    message.addByte(i);
+    return shake128.of(1344).convert(message.toBytes()).bytes;
   }
 
 
@@ -53,8 +53,8 @@ class KeyGenerator {
   /// G takes in a 256-bit (32-byte) seed and returns
   /// its SHA3-512 hash split in two.
   (Uint8List lower32Bytes, Uint8List upper32Bytes) _g(Uint8List seed) {
-    var bytes = sha3_512.string(ascii.decode(seed), ascii).bytes;
-    return (bytes.sublist(0, 256), bytes.sublist(256));
+    var bytes = sha3_512.convert(seed).bytes;
+    return (bytes.sublist(0, 32), bytes.sublist(32));
   }
 
 
@@ -64,10 +64,10 @@ class KeyGenerator {
   /// PRF takes in a 256-bit (32-byte) [seed] and a
   /// [nonce] and returns a 2000-byte SHAKE256 hash.
   Uint8List _prf(Uint8List seed, int nonce) {
-    Uint8List message = Uint8List.fromList(seed);
-    message.add(nonce);
-    String messageString = ascii.decode(message);
-    return shake256.of(2000).string(messageString, ascii).bytes;
+    BytesBuilder message = BytesBuilder();
+    message.add(seed);
+    message.addByte(nonce);
+    return shake256.of(2000).convert(message.toBytes()).bytes;
   }
 
 
@@ -86,7 +86,7 @@ class KeyGenerator {
   /// array of bytes "[a]" and returns a Polynomial with
   /// [n] coefficients.
   PolynomialRing _cbd(Uint8List a, int eta) {
-    assert( a.length == ((2*eta*n/8) as int));
+    assert( a.length == ((2*eta*n/8).round()));
 
     // Returns a list of 2*n*eta bits
     List<int> bitArray = _getBitArrayFromByteArray(a);
@@ -114,8 +114,10 @@ class KeyGenerator {
     List<int> coefficients = [];
     for (var offset = 0; offset < stream.length; offset+=3) {
       var bytes = stream.sublist(offset, offset + 3);
-      var numbers = _convertUint8ListToNBitIntegers(bytes, 12);
-      for (var num in numbers) {
+      int num1 = bytes[0] + (256 * (bytes[1] % 16));
+      int num2 = (bytes[1] >> 4) + (16 * bytes[2]);
+
+      for (var num in [num1, num2]) {
         if (num >= q) continue;
         coefficients.add(num);
         if (coefficients.length == n) return PolynomialRing.from(coefficients, n, q);
@@ -131,7 +133,7 @@ class KeyGenerator {
       flattenedCoefficients.add(
           _cbd(
             // Truncate hash result to 2*eta*n/8 = 64*eta bytes when n=256.
-              _prf(sigma, i + offset).sublist(0, (2*eta*n/8) as int),
+              _prf(sigma, i + offset).sublist(0, (2*eta*n/8).round() ),
               eta
           )
       );
@@ -141,15 +143,15 @@ class KeyGenerator {
 
   /// Generates a k*k matrix of samples
   PolynomialMatrix _sampleMatrix(Uint8List rho) {
-    List<PolynomialRing> flattenedCoefficients = [];
+    List<PolynomialRing> polynomials = [];
     for (var i=0; i<k; i++) {
       for (var j=0; j<k; j++) {
-        flattenedCoefficients.add(
+        polynomials.add(
             _sampleUniform( _xof(rho, j, i) )
         );
       }
     }
-    return PolynomialMatrix.fromList(flattenedCoefficients, k, k);
+    return PolynomialMatrix.fromList(polynomials, k, k);
   }
 
 
@@ -158,42 +160,6 @@ class KeyGenerator {
 
   // ------------ HELPER METHODS ------------
 
-  List<int> _convertUint8ListToNBitIntegers(Uint8List uint8List, int bits) {
-    List<int> result = [];
-    int value = 0;
-    int bitsRemaining = bits;
-
-    for (int byte in uint8List) {
-      int bitsInByte = 8;
-
-      while (bitsInByte > 0) {
-        if (bitsRemaining >= bitsInByte) {
-          value <<= bitsInByte;
-          value |= byte;
-          bitsRemaining -= bitsInByte;
-          bitsInByte = 0;
-        } else {
-          value <<= bitsRemaining;
-          value |= (byte >> (8 - bitsRemaining));
-          bitsInByte -= bitsRemaining;
-          bitsRemaining = 0;
-        }
-
-        if (bitsRemaining == 0) {
-          result.add(value);
-          value = 0;
-          bitsRemaining = bits;
-        }
-      }
-    }
-
-    if (bitsRemaining < bits && bitsRemaining > 0) {
-      value <<= (bits - bitsRemaining);
-      result.add(value);
-    }
-
-    return result;
-  }
 
   /// Takes in a byte array of size x and returns its binary
   /// representation as a bit array of size 8*x
@@ -259,7 +225,8 @@ class KeyGenerator {
     var A = _generateMatrixA(rho);
     var s = _generateVectorS(sigma);
     var e = _generateVectorE(sigma);
-    var t = A.multiply(s).add(e);
+    var tHat = A.multiply(s);
+    var t = tHat.plus(e);
 
     return (PKEPublicKey(t, rho), PKEPrivateKey(s));
   }

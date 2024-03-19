@@ -85,16 +85,13 @@ class PolynomialRing {
     return bits;
   }
 
-  /// Takes in a list of bit representations and returns
+  /// Takes in a list of bits and returns
   /// a list of words of size [wordSize].
   static List<int> _bitsToWords(List<int> bits, int wordSize) {
     List<int> words = [];
 
-    // Calculate the number of bits needed to represent a word of size wordSize
-    int bitsPerWord = wordSize * bits.length;
-
     // Ensure that the number of bits is divisible evenly by the wordSize
-    if (bitsPerWord % wordSize != 0) {
+    if (bits.length % wordSize != 0) {
       throw ArgumentError('Number of bits is not divisible evenly by wordSize');
     }
 
@@ -118,7 +115,7 @@ class PolynomialRing {
   /// in {0, 1, ..., 255} and returns a list of <code>l</code>
   /// coefficients with values in {0, 1, ..., 2^[w] - 1}
   static List<int> _decode(Uint8List encodedCoefficients, int w) {
-    return _bitsToWords(_wordsToBits(encodedCoefficients, w), 8);
+    return _bitsToWords(_wordsToBits(encodedCoefficients, 8), w);
   }
 
 
@@ -148,7 +145,7 @@ class PolynomialRing {
   /// in {0, 1, ..., 2^w - 1} and returns a list of <code>l*w/8</code>
   /// coefficients with values in {0, 1, ..., 255}
   Uint8List _encode(List<int> coefficients, int w) {
-    return Uint8List.fromList(_bitsToWords(_wordsToBits(coefficients, 8), w));
+    return Uint8List.fromList(_bitsToWords(_wordsToBits(coefficients, w), 8));
   }
 
   /// Divides [coefficients] by X^n + 1 and returns the remainder as a list of
@@ -192,7 +189,7 @@ class PolynomialRing {
   ///
   /// For an in-depth explanation on the algorithm, please check out
   /// https://www.geeksforgeeks.org/program-add-two-polynomials/
-  PolynomialRing add(PolynomialRing g) {
+  PolynomialRing plus(PolynomialRing g) {
     if (g.q != q) throw ArgumentError("g cannot have a different modulus q");
     if (g.n != n) throw ArgumentError("g cannot have a different n");
 
@@ -228,7 +225,7 @@ class PolynomialRing {
     List<int> resultingCoefficients = List.filled(resultingDegree + 1, 0);
 
     for (int i=0; i < coefficients.length; i++) {
-      for (int j=0; j < g.coefficients.length; i++) {
+      for (int j=0; j < g.coefficients.length; j++) {
         resultingCoefficients[i + j] += coefficients[i] * g.coefficients[j];
         resultingCoefficients[i + j] %= q;
       }
@@ -273,6 +270,11 @@ class PolynomialRing {
 
   Uint8List serialize(int w) {
     return _encode(coefficients, w);
+  }
+
+  @override
+  String toString() {
+    return "Poly[$n]($coefficients)";
   }
 
 }

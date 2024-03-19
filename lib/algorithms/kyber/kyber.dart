@@ -111,10 +111,10 @@ class Kyber {
   ///
   /// returns <code>A || B</code>
   Uint8List _join(Uint8List A, Uint8List B) {
-    var result = Uint8List(0);
-    result.addAll(A);
-    result.addAll(B);
-    return result;
+    var result = BytesBuilder();
+    result.add(A);
+    result.add(B);
+    return result.toBytes();
   }
 
 
