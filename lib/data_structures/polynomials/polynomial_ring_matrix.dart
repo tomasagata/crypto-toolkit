@@ -9,6 +9,8 @@ class PolynomialMatrix {
   List<List<PolynomialRing>> elementMatrix;
   int get rows => elementMatrix.length;
   int get columns => elementMatrix[0].length;
+  (int rows, int columns) get shape => (rows, columns);
+  List<PolynomialRing> get polynomials => elementMatrix.expand((row) => row).toList();
 
 
   // --------- CONSTRUCTORS ---------
@@ -164,6 +166,20 @@ class PolynomialMatrix {
     return PolynomialMatrix.fromSquareMatrix(result);
   }
 
+  PolynomialMatrix minus(PolynomialMatrix other) {
+    if (rows != other.rows || columns != other.columns) {
+      throw ArgumentError("Matrices must have the same dimensions for subtraction.");
+    }
+
+    List<List<PolynomialRing>> result = List.generate(rows, (i) {
+      return List.generate(columns, (j) {
+        return elementMatrix[i][j].minus(other.elementMatrix[i][j]);
+      });
+    });
+
+    return PolynomialMatrix.fromSquareMatrix(result);
+  }
+
 
   PolynomialMatrix multiply(PolynomialMatrix other) {
     if (columns != other.rows) {
@@ -224,6 +240,40 @@ class PolynomialMatrix {
     return elementMatrix[0][0];
   }
 
+  (PolynomialMatrix m1, PolynomialMatrix m0) power2Round(int d) {
+    var m1Polynomials = <PolynomialRing>[];
+    var m0Polynomials = <PolynomialRing>[];
+    for (var column in elementMatrix){
+      for (var poly in column){
+        var (p1, p0) = poly.power2Round(d);
+        m1Polynomials.add(p1);
+        m0Polynomials.add(p0);
+      }
+    }
+
+    return (
+      PolynomialMatrix.fromList(m1Polynomials, rows, columns),
+      PolynomialMatrix.fromList(m0Polynomials, rows, columns)
+    );
+  }
+
+  (PolynomialMatrix m1, PolynomialMatrix m0) decompose(int alpha) {
+    var m1Polynomials = <PolynomialRing>[];
+    var m0Polynomials = <PolynomialRing>[];
+    for (var column in elementMatrix){
+      for (var poly in column){
+        var (p1, p0) = poly.decompose(alpha);
+        m1Polynomials.add(p1);
+        m0Polynomials.add(p0);
+      }
+    }
+
+    return (
+    PolynomialMatrix.fromList(m1Polynomials, rows, columns),
+    PolynomialMatrix.fromList(m0Polynomials, rows, columns)
+    );
+  }
+
 
   Uint8List serialize(int d) {
     var result = BytesBuilder();
@@ -247,6 +297,35 @@ class PolynomialMatrix {
     }
     matrix += "]\n";
     return matrix;
+  }
+
+  PolynomialMatrix scale(PolynomialRing p) {
+    List<PolynomialRing> scaledPolynomials = [];
+    for (var row in elementMatrix) {
+      for (var poly in row) {
+        scaledPolynomials.add(poly.multiply(p));
+      }
+    }
+    return PolynomialMatrix.fromList(scaledPolynomials, rows, columns);
+  }
+
+  bool checkNormBound(int bound) {
+    for (var row in elementMatrix) {
+      for (var poly in row) {
+        if (poly.checkNormBound(bound)) return true;
+      }
+    }
+    return false;
+  }
+
+  PolynomialMatrix scaleInt(int a) {
+    List<PolynomialRing> resultingPolynomials = [];
+    for (var row in elementMatrix) {
+      for (var poly in row) {
+        resultingPolynomials.add(poly.multiplyInt(a));
+      }
+    }
+    return PolynomialMatrix.fromList(resultingPolynomials, rows, columns);
   }
 
 }

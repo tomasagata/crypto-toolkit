@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:hashlib/hashlib.dart';
 
 import 'abstractions/pke_cipher.dart';
@@ -88,14 +85,14 @@ class Kyber {
   ///
   /// Takes in a variable length byte array and returns its SHA3_256 hash.
   Uint8List _h(Uint8List message) {
-    return sha3_256.string(ascii.decode(message), ascii).bytes;
+    return sha3_256.convert(message).bytes;
   }
 
   /// KDF primitive from Kyber specification.
   ///
   /// Takes in a variable length byte array and returns a 32 byte SHAKE256 hash.
   Uint8List _kdf(Uint8List message) {
-    return shake256.of(32).string(ascii.decode(message), ascii).bytes;
+    return shake256.of(32).convert(message).bytes;
   }
 
   /// G primitive from Kyber specification.
@@ -103,7 +100,7 @@ class Kyber {
   /// G takes in a variable length seed and returns
   /// its SHA3-512 hash split in two.
   (Uint8List lower32Bytes, Uint8List upper32Bytes) _g(Uint8List seed) {
-    var bytes = sha3_512.string(ascii.decode(seed), ascii).bytes;
+    var bytes = sha3_512.convert(seed).bytes;
     return (bytes.sublist(0, 256), bytes.sublist(256));
   }
 

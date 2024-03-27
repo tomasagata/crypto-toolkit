@@ -1,9 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-
-import '../polynomials/polynomial_ring_matrix.dart';
+import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring_matrix.dart';
 
 class PKEPublicKey {
 

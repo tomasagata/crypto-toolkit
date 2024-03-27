@@ -10,9 +10,14 @@ class PolynomialRing {
   /// Creates a new polynomial from a coefficient list.
   ///
   /// The coefficient list does not need to be normalized.
-  factory PolynomialRing.from(List<int> coefficientList, int n, int q) {
+  /// If [skipModulo] is set, the coefficients will be treated as-is.
+  factory PolynomialRing.from(List<int> coefficientList, int n, int q,
+      {bool skipModulo = false}) {
     var normalizedCoefficients = _normalize(coefficientList, n);
-    normalizedCoefficients = _moduloCoefs(normalizedCoefficients, q);
+
+    if(!skipModulo){
+      normalizedCoefficients = _moduloCoefs(normalizedCoefficients, q);
+    }
 
     return PolynomialRing._internal(normalizedCoefficients, n, q);
   }
@@ -39,6 +44,34 @@ class PolynomialRing {
 
 
   // --------- INTERNAL METHODS ---------
+
+  /// Receives a number [x] and returns a number [x]' in (-q/2; q/2]
+  /// when [q] is even or in [-(q-1)/2; (q-1)/2] when [q] is odd.
+  ///
+  /// [x]' still holds that [x]' mod [q] = [x] mod [q].
+  int _centeredModularReduction(int x, int q) {
+    var halfQ = (q - 1) ~/ 2;
+    return ((x + halfQ) % q) - halfQ;
+  }
+
+
+  (int r1, int r0) _decompose(int r, int alpha, int q) {
+    var r0 = _centeredModularReduction(r, alpha);
+    var r1 = r - r0;
+    if(r1 == q - 1) return (0, r0 - 1);
+    r1 = r1 ~/ alpha;
+    return (r1, r0);
+  }
+
+
+  bool _checkNormBound(int n, int bound, int q) {
+    int x;
+    x = n % q;
+    x = ((q - 1) >> 1) - x;
+    x = x ^ (x >> 31);
+    x = ((q - 1) >> 1) - x;
+    return x >= bound;
+  }
 
   /// Creates a new normalized list of coefficients
   static List<int> _normalize(List<int> coefficientList, int n) {
@@ -268,6 +301,37 @@ class PolynomialRing {
     return PolynomialRing.from(resultingCoefficients, n, q);
   }
 
+  (PolynomialRing p1, PolynomialRing p0) power2Round(int d) {
+    var power2 = 1 << d;
+    var p1Coefs = <int>[];
+    var p0Coefs = <int>[];
+    for (var r in coefficients){
+      var r0 = _centeredModularReduction(r, power2);
+      p1Coefs.add((r - r0) >> d);
+      p0Coefs.add(r0);
+    }
+
+    return (
+        PolynomialRing.from(p1Coefs, n, q),
+        PolynomialRing.from(p0Coefs, n, q, skipModulo: true)
+    );
+  }
+
+  (PolynomialRing p1, PolynomialRing p0) decompose(int alpha) {
+    var p1Coefs = <int>[];
+    var p0Coefs = <int>[];
+    for (var r in coefficients){
+      var (r1, r0) = _decompose(r, alpha, q);
+      p1Coefs.add(r1);
+      p0Coefs.add(r0);
+    }
+
+    return (
+    PolynomialRing.from(p1Coefs, n, q),
+    PolynomialRing.from(p0Coefs, n, q, skipModulo: true)
+    );
+  }
+
   Uint8List serialize(int w) {
     return _encode(coefficients, w);
   }
@@ -275,6 +339,13 @@ class PolynomialRing {
   @override
   String toString() {
     return "Poly[$n]($coefficients)";
+  }
+
+  bool checkNormBound(int bound) {
+    for (int c in coefficients) {
+      if (_checkNormBound(c, bound, q)) return true;
+    }
+    return false;
   }
 
 }

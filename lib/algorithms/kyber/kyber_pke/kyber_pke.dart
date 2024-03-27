@@ -4,8 +4,9 @@ import '../abstractions/pke_cipher.dart';
 import '../abstractions/pke_private_key.dart';
 import '../abstractions/pke_public_key.dart';
 import '../generators/key_generator.dart';
-import '../polynomials/polynomial_ring.dart';
-import '../polynomials/polynomial_ring_matrix.dart';
+
+import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring.dart';
+import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring_matrix.dart';
 
 class KyberPKE {
 

@@ -1,0 +1,381 @@
+import 'dart:typed_data';
+
+import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_private_key.dart';
+import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_public_key.dart';
+import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_signature.dart';
+import 'package:crypto_toolkit/algorithms/dilithium/generators/dilithium_key_generator.dart';
+import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring.dart';
+import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring_matrix.dart';
+import 'package:hashlib/hashlib.dart';
+
+class Dilithium {
+
+  /// Creates a new generic Dilithium implementation
+  ///
+  /// A generic Dilithium implementation receives the following parameters:
+  /// - __[n]__: Maximum degree of the used polynomials
+  /// - __[k]__: Number of polynomials per vector
+  /// - __[q]__: Modulus for numbers
+  /// - __[eta_1], [eta_2]__: Size of "small" coefficients used in the private key and noise vectors.
+  /// - __[du], [dv]__: How many bits to retain per coefficient of __u__ and __v__. Kyber will compress
+  /// the cypher according to these two variables.
+  Dilithium({
+    required this.n,
+    required this.q,
+    required this.d,
+    required this.k,
+    required this.l,
+    required this.omega,
+    required this.gamma1,
+    required this.gamma2,
+    required this.beta,
+    required this.keyGenerator
+  });
+
+  /// Creates a custom Dilithium implementation.
+  ///
+  /// "n" : 256,
+  /// "q" : 8380417,
+  /// "d" : 13,
+  /// "k" : 4,
+  /// "l" : 4,
+  /// "eta" : 2,
+  /// "eta_bound" : 15,
+  /// "tau" : 39,
+  /// "omega" : 80,
+  /// "gamma_1" : 131072, # 2^17
+  /// "gamma_2" : 95232,  # (q-1)/88
+  factory Dilithium.custom({
+    required int n,
+    required int q,
+    required int d,
+    required int k,
+    required int l,
+    required int eta,
+    required int etaBound,
+    required int tau,
+    required int omega,
+    required int gamma1,
+    required int gamma2
+  }) {
+    return Dilithium(
+        n: n,
+        q: q,
+        d: d,
+        k: k,
+        l: l,
+        omega: omega,
+        gamma1: gamma1,
+        gamma2: gamma2,
+        beta: tau * eta,
+        keyGenerator: DilithiumKeyGenerator(
+            n: n, q: q, d: d, k: k, l: l, eta: eta, etaBound: etaBound, tau: tau, gamma1: gamma1
+        )
+    );
+  }
+
+  factory Dilithium.version2() {
+    return Dilithium(
+        n: 256,
+        q: 8380417,
+        d: 13,
+        k: 4,
+        l: 4,
+        omega: 80,
+        gamma1: 131072,
+        gamma2: 95232,
+        beta: 39 * 2,
+        keyGenerator: DilithiumKeyGenerator(
+            n: 256, q: 8380417, d: 13, k: 4, l: 4, eta: 2, etaBound: 15, tau: 39, gamma1: 131072
+        )
+    );
+  }
+
+  factory Dilithium.version3() {
+    return Dilithium(
+        n: 256,
+        q: 8380417,
+        d: 13,
+        k: 6,
+        l: 5,
+        omega: 55,
+        gamma1: 524288,
+        gamma2: 261888,
+        beta: 49 * 4,
+        keyGenerator: DilithiumKeyGenerator(
+            n: 256, q: 8380417, d: 13, k: 6, l: 5, eta: 4, etaBound: 9, tau: 49, gamma1: 524288
+        )
+    );
+  }
+
+  factory Dilithium.version5() {
+    return Dilithium(
+        n: 256,
+        q: 8380417,
+        d: 13,
+        k: 8,
+        l: 7,
+        omega: 75,
+        gamma1: 524288,
+        gamma2: 261888,
+        beta: 60 * 2,
+        keyGenerator: DilithiumKeyGenerator(
+            n: 256, q: 8380417, d: 13, k: 8, l: 7, eta: 2, etaBound: 15, tau: 60, gamma1: 524288
+        )
+    );
+  }
+
+
+
+  // -------- MODEL PARAMETERS --------
+  int n;
+  int q;
+  int d;
+  int k;
+  int l;
+  int omega;
+  int gamma1;
+  int gamma2;
+  int beta;
+  DilithiumKeyGenerator keyGenerator;
+
+
+
+  // ----------- KYBER MATHEMATICAL PRIMITIVES -------------
+
+  Uint8List _h(Uint8List message, int outputSizeInBytes) {
+    return shake256.of(outputSizeInBytes).convert(message).bytes;
+  }
+
+
+
+
+
+
+  // ----------- INTERNAL METHODS -------------
+
+  /// Joins two byte arrays A and B together.
+  ///
+  /// returns <code>A || B</code>
+  Uint8List _join(Uint8List A, Uint8List B) {
+    var result = BytesBuilder();
+    result.add(A);
+    result.add(B);
+    return result.toBytes();
+  }
+
+  /// Receives a number [x] and returns a number [x]' in (-q/2; q/2]
+  /// when [q] is even or in [-(q-1)/2; (q-1)/2] when [q] is odd.
+  ///
+  /// [x]' still holds that [x]' mod [q] = [x] mod [q].
+  int _centeredModularReduction(int x, int q) {
+    var halfQ = (q - 1) ~/ 2;
+    return ((x + halfQ) % q) - halfQ;
+  }
+
+  (int r1, int r0) _decompose(int r, int alpha, int q) {
+    var r0 = _centeredModularReduction(r, alpha);
+    var r1 = r - r0;
+    if(r1 == q - 1) return (0, r0 - 1);
+    r1 = r1 ~/ alpha;
+    return (r1, r0);
+  }
+
+  PolynomialMatrix _makeHint(PolynomialMatrix v1, PolynomialMatrix v2, int alpha) {
+    if (v1.shape != v2.shape){
+      throw ArgumentError("Vectors v1 and v2 must share the same shape");
+    }
+
+    int rows = v1.rows;
+    int columns = v1.columns;
+
+    List<PolynomialRing> hintPolynomials = [];
+    List<PolynomialRing> polynomialsV1 = v1.polynomials;
+    List<PolynomialRing> polynomialsV2 = v2.polynomials;
+    for (int i=0; i<rows * columns; i++) {
+      if (polynomialsV1[i].n != polynomialsV2[i].n) {
+        throw StateError("n dimension mismatch.");
+      }
+
+      List<int> coefs = [];
+      for (int j=0; j<polynomialsV1[i].n; j++) {
+        int z0 = polynomialsV1[i].coefficients[j];
+        int r1 = polynomialsV2[i].coefficients[j];
+        int hint = 0;
+
+        int gamma2 = (alpha >>> 1);
+        bool condition1 = z0 <= gamma2;
+        bool condition2 = z0 > (q - gamma2);
+        bool condition3 = z0 == (q - gamma2) && r1 == 0;
+        if (condition1 || condition2 || condition3){
+          hint = 0;
+        }
+        hint = 1;
+
+        coefs.add(hint);
+      }
+
+      hintPolynomials.add(PolynomialRing.from(coefs, n, q));
+    }
+
+    return PolynomialMatrix.fromList(hintPolynomials, rows, columns);
+  }
+
+  int _sumHint(PolynomialMatrix hint) {
+    int sum = 0;
+    for (var poly in hint.polynomials) {
+      for (var coef in poly.coefficients) {
+        sum += coef;
+      }
+    }
+    return sum;
+  }
+
+  PolynomialMatrix _useHint(
+      PolynomialMatrix v1, PolynomialMatrix v2, int alpha) {
+    if (v1.shape != v2.shape){
+      throw ArgumentError("Vectors v1 and v2 must share the same shape");
+    }
+
+    int rows = v1.rows;
+    int columns = v1.columns;
+
+    List<PolynomialRing> resultingPolynomials = [];
+    List<PolynomialRing> polynomialsV1 = v1.polynomials;
+    List<PolynomialRing> polynomialsV2 = v2.polynomials;
+    for (int i=0; i<rows * columns; i++) {
+      if (polynomialsV1[i].n != polynomialsV2[i].n) {
+        throw StateError("n dimension mismatch.");
+      }
+
+      List<int> coefs = [];
+      for (int j=0; j<polynomialsV1[i].n; j++) {
+        int h = polynomialsV1[i].coefficients[j];
+        int r = polynomialsV2[i].coefficients[j];
+
+        var m = (q-1) ~/ alpha;
+        var (r1, r0) = _decompose(r, alpha, q);
+        if (h != 1) {
+          coefs.add(r1);
+          continue;
+        }
+        if (r0 <= 0) {
+          coefs.add((r1 - 1) % m);
+          continue;
+        }
+        coefs.add((r1 + 1) % m);
+      }
+
+      resultingPolynomials.add(PolynomialRing.from(coefs, n, q));
+    }
+
+    return PolynomialMatrix.fromList(resultingPolynomials, rows, columns);
+  }
+
+
+
+
+
+
+  // ----------- PUBLIC KEM API -------------
+
+  /// A Dilithium keypair is derived deterministically from a
+  /// 32-octet seed.
+  (DilithiumPublicKey pk, DilithiumPrivateKey sk) generateKeys(Uint8List seed) {
+    if( seed.length != 32 ) {
+      throw ArgumentError("Seed must be 32 bytes in length");
+    }
+
+    // Generate PKE keys for decryption and encryption of cyphers.
+    var (pk, sk) = keyGenerator.generateKeys(seed);
+
+    return (pk, sk);
+  }
+
+
+
+  /// Kyber encapsulation takes a public key and a 32-octet seed
+  /// and deterministically generates a shared secret and ciphertext
+  /// for the public key.
+  DilithiumSignature sign(DilithiumPrivateKey sk, Uint8List message, {bool randomized = false}) {
+    var A = keyGenerator.expandA(sk.rho);
+
+    var mu = _h( _join(sk.tr, message), 64);
+    var kappa = 0;
+
+    Uint8List rhoPrime;
+    if (randomized) {
+      rhoPrime = randomBytes(64);
+    } else {
+      rhoPrime = _h( _join(sk.K, mu), 64);
+    }
+
+    var alpha = gamma2 << 1;
+    while (true) {
+      var y = keyGenerator.expandMask(rhoPrime, kappa);
+
+      // Increment the nonce
+      kappa += l;
+
+      var w = A.multiply(y);
+
+      // Decompose w into its high and low bits.
+      var (w1, w0) = w.decompose(alpha);
+
+      var w1Bytes = w1.serialize(gamma2);
+      var cTilde = _h( _join(mu, w1Bytes), 32);
+      var c = keyGenerator.sampleInBall(cTilde);
+
+      var z = y.plus(sk.s1.scale(c));
+      if (z.checkNormBound(gamma1 - beta)) continue;
+
+      var w0MinusCS2 = w0.minus(sk.s2.scale(c));
+      if (w0MinusCS2.checkNormBound(gamma2 - beta)) continue;
+
+      var cT0 = sk.t0.scale(c);
+      if (cT0.checkNormBound(gamma2)) continue;
+
+      var w0MinusCS2PlusCT0 = w0MinusCS2.plus(cT0);
+      var h = _makeHint(w0MinusCS2PlusCT0, w1, alpha);
+
+      if (_sumHint(h) > omega) continue;
+
+      return DilithiumSignature(cTilde, z, h);
+    }
+  }
+
+
+
+  /// Kyber decapsulation takes the received cypher text from the other
+  /// end and your public key, private key and 32-byte z value and
+  /// returns a shared secret.
+  ///
+  /// - If decapsulation was successful, returns the shared key calculated in the
+  /// encapsulation step.
+  /// - If decapsulation was unsuccessful, returns an invalid shared key created
+  /// with the given 32-byte z value calculated in the key-generation step.
+  bool verify(DilithiumPublicKey pk, Uint8List message, DilithiumSignature signature) {
+
+    if ( _sumHint(signature.h) > omega ) return false;
+
+    if ( signature.z.checkNormBound(gamma1 - beta) ) return false;
+
+    var A = keyGenerator.expandA(pk.rho);
+    
+    var tr = _h(pk.serialize(), 32);
+    var mu = _h( _join(tr, message), 64);
+    var c = keyGenerator.sampleInBall(signature.cTilde);
+
+    var cT1 = pk.t1.scaleInt(1 << d).scale(c);
+
+    var azMinusCt1 = A.multiply(signature.z).minus(cT1);
+
+    var wPrime = _useHint(signature.h, azMinusCt1, 2*gamma2);
+    var wPrimeBytes = wPrime.serialize(gamma2);
+
+    return signature.cTilde == _h( _join(mu, wPrimeBytes), 32);
+  }
+
+}
+
+
