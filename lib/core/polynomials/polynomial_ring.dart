@@ -110,7 +110,7 @@ class PolynomialRing {
       }
 
       // Add the bits of the binary representation to the bits list
-      for (int i = 0; i < binaryString.length; i++) {
+      for (int i = 0; i < wordSize; i++) {
         bits.add(int.parse(binaryString[i]));
       }
     }
@@ -150,7 +150,6 @@ class PolynomialRing {
   static List<int> _decode(Uint8List encodedCoefficients, int w) {
     return _bitsToWords(_wordsToBits(encodedCoefficients, 8), w);
   }
-
 
 
 

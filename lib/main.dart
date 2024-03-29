@@ -1,41 +1,39 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto_toolkit/algorithms/dilithium/primitives/xof.dart';
 import 'package:crypto_toolkit/algorithms/kyber/kyber.dart';
 import 'package:crypto_toolkit/screens/app_layout.dart';
 import 'package:flutter/material.dart';
+import 'package:hashlib/hashlib.dart';
+
+import 'algorithms/dilithium/dilithium.dart';
 
 
 void main() {
   // runApp(const App());
-  var kyberInstance = Kyber.kem512().innerPKE;
-  var keyGenerationSeed = BytesBuilder();
-  keyGenerationSeed.add(
-      [ 0, 1, 2, 3, 4, 5, 6, 7,
-        0, 1, 2, 3, 4, 5, 6, 7,
-        0, 1, 2, 3, 4, 5, 6, 7,
-        0, 1, 2, 3, 4, 5, 6, 7]
-  );
+  var dilithium = Dilithium.level2();
 
-  var encryptionSeed = BytesBuilder();
-  encryptionSeed.add(
-    [
-      7, 6, 5, 4, 3, 2, 1, 0,
-      7, 6, 5, 4, 3, 2, 1, 0,
-      7, 6, 5, 4, 3, 2, 1, 0,
-      7, 6, 5, 4, 3, 2, 1, 0
-    ]
-  );
+  var keygenSeed = Uint8List.fromList([
+     0,  1,  2,  3,  4,  5,  6,  7,
+     8,  9, 10, 11, 12, 13, 14, 15,
+    16, 17, 18, 19, 20, 21, 22, 23,
+    24, 25, 26, 27, 28, 29, 30, 31
+  ]);
 
-  var message = BytesBuilder();
-  message.add([0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1]);
-  print(message.length);
+  var (pk, sk) = dilithium.generateKeys(keygenSeed);
 
-  var (pk, sk) = kyberInstance.generateKeys(keyGenerationSeed.toBytes());
-  var cypher = kyberInstance.encrypt(pk, message.toBytes(), encryptionSeed.toBytes());
-  print(cypher.serialize());
-  var decryptedMessage = kyberInstance.decrypt(sk, cypher);
-  print(ascii.decode(decryptedMessage));
+  var message = Uint8List.fromList([
+    0,  1,  0,  0,  0,  0,  0,  0,
+    0,  1,  0,  1,  0,  0,  0,  0,
+    0,  1,  0,  1,  0,  1,  0,  0,
+    0,  1,  0,  1,  0,  1,  0,  1,
+  ]);
+
+  var signature = dilithium.sign(sk, message);
+
+  var valid = dilithium.verify(pk, message, signature);
+  print(valid);
 }
 
 class App extends StatelessWidget {

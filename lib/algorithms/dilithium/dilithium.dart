@@ -4,8 +4,8 @@ import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_priva
 import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_public_key.dart';
 import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_signature.dart';
 import 'package:crypto_toolkit/algorithms/dilithium/generators/dilithium_key_generator.dart';
-import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring.dart';
-import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring_matrix.dart';
+import 'package:crypto_toolkit/core/polynomials/polynomial_ring.dart';
+import 'package:crypto_toolkit/core/polynomials/polynomial_ring_matrix.dart';
 import 'package:hashlib/hashlib.dart';
 
 class Dilithium {
@@ -32,49 +32,7 @@ class Dilithium {
     required this.keyGenerator
   });
 
-  /// Creates a custom Dilithium implementation.
-  ///
-  /// "n" : 256,
-  /// "q" : 8380417,
-  /// "d" : 13,
-  /// "k" : 4,
-  /// "l" : 4,
-  /// "eta" : 2,
-  /// "eta_bound" : 15,
-  /// "tau" : 39,
-  /// "omega" : 80,
-  /// "gamma_1" : 131072, # 2^17
-  /// "gamma_2" : 95232,  # (q-1)/88
-  factory Dilithium.custom({
-    required int n,
-    required int q,
-    required int d,
-    required int k,
-    required int l,
-    required int eta,
-    required int etaBound,
-    required int tau,
-    required int omega,
-    required int gamma1,
-    required int gamma2
-  }) {
-    return Dilithium(
-        n: n,
-        q: q,
-        d: d,
-        k: k,
-        l: l,
-        omega: omega,
-        gamma1: gamma1,
-        gamma2: gamma2,
-        beta: tau * eta,
-        keyGenerator: DilithiumKeyGenerator(
-            n: n, q: q, d: d, k: k, l: l, eta: eta, etaBound: etaBound, tau: tau, gamma1: gamma1
-        )
-    );
-  }
-
-  factory Dilithium.version2() {
+  factory Dilithium.level2() {
     return Dilithium(
         n: 256,
         q: 8380417,
@@ -91,7 +49,7 @@ class Dilithium {
     );
   }
 
-  factory Dilithium.version3() {
+  factory Dilithium.level3() {
     return Dilithium(
         n: 256,
         q: 8380417,
@@ -108,7 +66,7 @@ class Dilithium {
     );
   }
 
-  factory Dilithium.version5() {
+  factory Dilithium.level5() {
     return Dilithium(
         n: 256,
         q: 8380417,
@@ -322,7 +280,13 @@ class Dilithium {
       // Decompose w into its high and low bits.
       var (w1, w0) = w.decompose(alpha);
 
-      var w1Bytes = w1.serialize(gamma2);
+      Uint8List w1Bytes;
+      if (gamma2 == 95232) { // Level 2
+        w1Bytes = w1.serialize(4);
+      } else { // Level 3 & 5
+        w1Bytes = w1.serialize(6);
+      }
+
       var cTilde = _h( _join(mu, w1Bytes), 32);
       var c = keyGenerator.sampleInBall(cTilde);
 
@@ -371,7 +335,12 @@ class Dilithium {
     var azMinusCt1 = A.multiply(signature.z).minus(cT1);
 
     var wPrime = _useHint(signature.h, azMinusCt1, 2*gamma2);
-    var wPrimeBytes = wPrime.serialize(gamma2);
+    Uint8List wPrimeBytes;
+    if (gamma2 == 95232) { // Level 2
+      wPrimeBytes = wPrime.serialize(4);
+    } else { // Level 3 & 5
+      wPrimeBytes = wPrime.serialize(6);
+    }
 
     return signature.cTilde == _h( _join(mu, wPrimeBytes), 32);
   }

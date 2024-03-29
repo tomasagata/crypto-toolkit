@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring.dart';
-import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring_matrix.dart';
+import 'package:crypto_toolkit/core/polynomials/polynomial_ring.dart';
+import 'package:crypto_toolkit/core/polynomials/polynomial_ring_matrix.dart';
 
 class PKECypher {
 

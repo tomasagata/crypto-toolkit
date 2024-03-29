@@ -7,8 +7,8 @@ import 'package:hashlib/hashlib.dart';
 import '../abstractions/dilithium_private_key.dart';
 import '../abstractions/dilithium_public_key.dart';
 
-import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring.dart';
-import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring_matrix.dart';
+import 'package:crypto_toolkit/core/polynomials/polynomial_ring.dart';
+import 'package:crypto_toolkit/core/polynomials/polynomial_ring_matrix.dart';
 
 import '../primitives/xof.dart';
 
@@ -97,30 +97,24 @@ class DilithiumKeyGenerator {
   /// [q] must be less or equal to 2^24, as coefficients can only
   /// allocate 3 bytes.
   PolynomialRing _sampleUniform(XOF stream) {
-    // Get the wordSize of the maximum coefficient possible.
-    int coefficientBits = _wordSize(q - 1);
-
-    // This is a constant from the Kyber and Dilithium specifications.
-    const maximumBytesPerCoefficient = 3;
-
-    int maximumBitsPerCoefficient = maximumBytesPerCoefficient * 8;
-
-    if (coefficientBits > maximumBitsPerCoefficient){
-      throw ArgumentError(
-          "q must be less or equal to 2^$maximumBitsPerCoefficient"
-      );
-    }
 
     List<int> coefficients = [];
     while(true) {
-      var bytes = stream.read(maximumBytesPerCoefficient);
-      List<int> nums = _extractIntegersFromByteArray(bytes, coefficientBits);
 
-      for (var num in nums) {
-        if (num >= q) continue;
-        coefficients.add(num);
-        if (coefficients.length == n) return PolynomialRing.from(coefficients, n, q);
+      // Read 3 bytes and get a little endian number from it
+      var bytes = BytesBuilder();
+      bytes.add(stream.read(3));
+      bytes.addByte(0);
+      var num = ByteData.sublistView(bytes.toBytes())
+          .getUint32(0, Endian.little);
+
+      num &= 0x7FFFFF;
+
+      if (num >= q) {
+        continue;
       }
+      coefficients.add(num);
+      if (coefficients.length == n) return PolynomialRing.from(coefficients, n, q);
     }
   }
 
@@ -130,13 +124,14 @@ class DilithiumKeyGenerator {
 
     List<int> coefficients = [];
     while (true) {
-      var bytes = stream.read(1);
-      List<int> nums = _extractIntegersFromByteArray(bytes, eta);
+      int j = stream.read(1)[0];
+
+      List<int> nums = [j & 0x0F, j >> 4];
 
       for (var num in nums){
         if(num < etaBound) {
           if (eta == 2) num %= 5;
-          coefficients.add(num);
+          coefficients.add(eta - num);
         }
         if(coefficients.length == n) {
           return PolynomialRing.from(coefficients, n, q);

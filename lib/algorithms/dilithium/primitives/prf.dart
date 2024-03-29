@@ -8,6 +8,18 @@ class PRF {
   factory PRF(Uint8List message) {
     var hashSink = const Shake256(0).createSink();
     hashSink.add(message);
+
+    // Update the final block
+    if (hashSink.pos == hashSink.blockLength) {
+      hashSink.$update();
+      hashSink.pos = 0;
+    }
+
+    // Setting the signature bytes
+    hashSink.buffer[hashSink.pos] ^= hashSink.paddingByte;
+    hashSink.buffer[hashSink.blockLength - 1] ^= 0x80;
+    hashSink.$update();
+
     return PRF._internal(hashSink);
   }
 
@@ -20,13 +32,12 @@ class PRF {
   /// Reads [bytes] from the (infinitely long) digest.
   Uint8List read(int bytes) {
     var digestBytes = Uint8List(bytes);
-    for (int i = 0; i < bytes; i++) {
+    for (int i = 0; i < bytes; i++, _offset++) {
       if (_offset == _hashSink.blockLength) {
         _hashSink.$update(_hashSink.buffer);
         _offset = 0;
       }
       digestBytes[i] = _hashSink.buffer[_offset];
-      _offset++;
     }
     return digestBytes;
   }

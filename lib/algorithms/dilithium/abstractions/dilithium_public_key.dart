@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:crypto_toolkit/data_structures/polynomials/polynomial_ring_matrix.dart';
+import 'package:crypto_toolkit/core/polynomials/polynomial_ring_matrix.dart';
 
 class DilithiumPublicKey {
   DilithiumPublicKey(this.rho, this.t1);
@@ -13,6 +13,9 @@ class DilithiumPublicKey {
   PolynomialMatrix t1;
 
   Uint8List serialize() {
-    throw UnimplementedError();
+    var result = BytesBuilder();
+    result.add(rho);
+    result.add(t1.serialize(10));
+    return result.toBytes();
   }
 }
