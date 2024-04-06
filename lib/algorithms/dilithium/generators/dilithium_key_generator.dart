@@ -1,7 +1,9 @@
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:crypto_toolkit/algorithms/dilithium/primitives/prf.dart';
+import 'package:crypto_toolkit/core/bit_packing/bit_packing_helper.dart';
+import 'package:crypto_toolkit/core/factories/polynomial_factory.dart';
+import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
 import 'package:hashlib/hashlib.dart';
 
 import '../abstractions/dilithium_private_key.dart';
@@ -32,8 +34,8 @@ class DilithiumKeyGenerator {
     required this.etaBound,
     required this.tau,
     required this.gamma1,
-
-  });
+  }) :
+    polyFactory = PolynomialFactory(n: n, q: q, helper: NTTHelper.dilithium());
 
 
 
@@ -49,6 +51,7 @@ class DilithiumKeyGenerator {
   int etaBound;
   int tau;
   int gamma1;
+  PolynomialFactory polyFactory;
 
 
 
@@ -96,7 +99,7 @@ class DilithiumKeyGenerator {
   /// Coefficients are sampled uniformly using rejection sampling.
   /// [q] must be less or equal to 2^24, as coefficients can only
   /// allocate 3 bytes.
-  PolynomialRing _sampleUniform(XOF stream) {
+  PolynomialRing _sampleUniform(XOF stream, {bool isNtt = false}) {
 
     List<int> coefficients = [];
     while(true) {
@@ -114,7 +117,7 @@ class DilithiumKeyGenerator {
         continue;
       }
       coefficients.add(num);
-      if (coefficients.length == n) return PolynomialRing.from(coefficients, n, q);
+      if (coefficients.length == n) return polyFactory.ring(coefficients, isNtt: isNtt);
     }
   }
 
@@ -134,7 +137,7 @@ class DilithiumKeyGenerator {
           coefficients.add(eta - num);
         }
         if(coefficients.length == n) {
-          return PolynomialRing.from(coefficients, n, q);
+          return polyFactory.ring(coefficients);
         }
       }
 
@@ -142,16 +145,16 @@ class DilithiumKeyGenerator {
   }
 
   /// Generates a rows*columns matrix of uniform samples.
-  PolynomialMatrix _sampleMatrix(Uint8List rho, int rows, int columns) {
+  PolynomialMatrix _sampleMatrix(Uint8List rho, int rows, int columns, {bool isNtt = false}) {
     List<PolynomialRing> polynomials = [];
     for (var i=0; i<rows; i++) {
       for (var j=0; j<columns; j++) {
         polynomials.add(
-            _sampleUniform( _xof(rho, j, i) )
+            _sampleUniform( _xof(rho, j, i), isNtt: isNtt)
         );
       }
     }
-    return PolynomialMatrix.fromList(polynomials, rows, columns);
+    return polyFactory.matrix(polynomials, rows, columns);
   }
 
   PolynomialRing _sampleMaskPolynomial(Uint8List rhoPrime, int i, int kappa) {
@@ -166,10 +169,9 @@ class DilithiumKeyGenerator {
     seed.add(rhoPrime);
     seed.add(littleEndianNonce.buffer.asUint8List());
     
-    Uint8List bytes = Uint8List.fromList(
-        _h(seed.toBytes(), totalBytes).reversed.toList()
-    );
-    List<int> numbers = _extractIntegersFromByteArray(bytes, bitCount);
+    Uint8List bytes = Uint8List.fromList( _h(seed.toBytes(), totalBytes) );
+
+    List<int> numbers = BitPackingHelper.intsFromBytes(bytes, bitCount);
 
     List<int> coefs = [];
     for (int i=0; i<n; i++) {
@@ -178,7 +180,7 @@ class DilithiumKeyGenerator {
       );
     }
 
-    return PolynomialRing.from(coefs, n, q);
+    return polyFactory.ring(coefs);
   }
 
 
@@ -186,96 +188,6 @@ class DilithiumKeyGenerator {
 
 
   // ------------ HELPER METHODS ------------
-
-  /// Extracts integers of [w] bits from a byte array.
-  ///
-  /// Starts extracting number from [leastSignificantBitFirst] unless
-  /// stated otherwise.
-  /// By default skips incomplete results unless [usePadding] is set.
-  ///
-  /// If padding is used and least significant bit is first processed,
-  /// padding will be used on the most significant bits. e.g.
-  /// [000101]
-  ///
-  /// If padding is used and most significant bit is first processed,
-  /// padding will be used on the least significant bits. e.g.
-  /// [101000]
-  List<int> _extractIntegersFromByteArray(Uint8List bytes, int w, {
-    bool leastSignificantBitFirst = true,
-    bool usePadding = false
-  }){
-    if (w > 32 || w <= 0) {
-      throw ArgumentError("w must be in the range ( 0; 32]");
-    }
-    if (bytes.isEmpty) {
-      throw ArgumentError("Byte array cannot be empty");
-    }
-
-    int arrayBitsLeft = 8;
-    int arrayBytesLeft = bytes.length;
-    int numberBitsLeft = w;
-
-    List<int> results = [];
-    if(!leastSignificantBitFirst) {
-      int num = 0;
-      int i = arrayBytesLeft - 1;
-      while (i >= 0) {
-        int maskBits = min(min(numberBitsLeft, 8), arrayBitsLeft);
-        int mask = (1 << maskBits) - 1;
-
-        num = (num << maskBits) | ((bytes[i] >>> (arrayBitsLeft - maskBits)) & mask);
-
-        numberBitsLeft -= maskBits;
-        arrayBitsLeft -= maskBits;
-
-        if(arrayBitsLeft == 0) {
-          i--;
-          arrayBitsLeft = 8;
-        }
-
-        if(numberBitsLeft == 0) {
-          results.add(num);
-          num = 0;
-          numberBitsLeft = w;
-        }
-      }
-
-      if (usePadding) {
-        results.add(num << numberBitsLeft);
-      }
-
-      return results;
-    }
-
-    int num = 0;
-    int i = 0;
-    while (i < bytes.length) {
-      int maskBits = min(min(numberBitsLeft, 8), arrayBitsLeft);
-      int mask = (1 << maskBits) - 1;
-
-      num = (num << maskBits) | ((bytes[i] >>> (8 - arrayBitsLeft)) & mask);
-
-      numberBitsLeft -= maskBits;
-      arrayBitsLeft -= maskBits;
-
-      if(arrayBitsLeft == 0) {
-        i++;
-        arrayBitsLeft = 8;
-      }
-
-      if(numberBitsLeft == 0) {
-        results.add(num);
-        num = 0;
-        numberBitsLeft = w;
-      }
-    }
-
-    if (usePadding) {
-      results.add(num);
-    }
-
-    return results;
-  }
 
 
   /// Calculates the word size of an integer [num].
@@ -300,8 +212,8 @@ class DilithiumKeyGenerator {
   // ------------ INTERNAL API ------------
 
 
-  PolynomialMatrix expandA(Uint8List rho) {
-    return _sampleMatrix(rho, k, l);
+  PolynomialMatrix expandA(Uint8List rho, {bool isNtt = false}) {
+    return _sampleMatrix(rho, k, l, isNtt: isNtt);
   }
 
 
@@ -317,8 +229,8 @@ class DilithiumKeyGenerator {
     }
 
     return (
-      PolynomialMatrix.vector(s1Polynomials),
-      PolynomialMatrix.vector(s2Polynomials)
+      polyFactory.vector(s1Polynomials),
+      polyFactory.vector(s2Polynomials)
     );
   }
 
@@ -338,9 +250,12 @@ class DilithiumKeyGenerator {
     var rhoPrime = seedBytes.sublist(32, 96); // 64 bytes
     var K = seedBytes.sublist(96);            // 32 bytes
 
-    var A = expandA(rho);
+    var A = expandA(rho, isNtt: true);
     var (s1, s2) = _expandS(rhoPrime);
-    var t = A.multiply(s1).plus(s2);
+    var s1Hat = s1.copy().toNtt();
+
+    var step1 = A.multiply(s1Hat);
+    var t = step1.fromNtt().plus(s2);
 
     var (t1, t0) = t.power2Round(d);
 
@@ -358,12 +273,13 @@ class DilithiumKeyGenerator {
 
     // As not all platforms support 64-bit integers, create a list
     // simulating a little-endian u64int
-    List<int> signIntArray = signBytes.reversed.toList();
+    List<int> signIntArray = signBytes.toList();
 
     List<int> coefficients = List.filled(n, 0);
 
-    int signInt = signIntArray[0];
-    for (int i=256-tau, iter=0, offset=0; i<n; i++, iter++) {
+    int offset = 0;
+    int signInt = signIntArray[offset];
+    for (int i=256-tau, iter=0; i<n; i++, iter++) {
       if (iter != 0 && iter % 8 == 0){
         offset++;
         signInt = signIntArray[offset];
@@ -379,7 +295,7 @@ class DilithiumKeyGenerator {
       signInt >>= 1;
     }
     
-    return PolynomialRing.from(coefficients, n, q);
+    return polyFactory.ring(coefficients);
   }
 
   PolynomialMatrix expandMask(Uint8List rhoPrime, int kappa) {
@@ -390,7 +306,7 @@ class DilithiumKeyGenerator {
       );
     }
 
-    return PolynomialMatrix.vector(polynomials);
+    return polyFactory.vector(polynomials);
   }
 
 

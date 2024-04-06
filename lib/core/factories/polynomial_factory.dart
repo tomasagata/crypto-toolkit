@@ -32,8 +32,8 @@ class PolynomialFactory {
 
 
 
-  PolynomialRing ring(List<int> coefficients) {
-    return PolynomialRing.from(coefficients, n, q);
+  PolynomialRing ring(List<int> coefficients, {bool isNtt = false}) {
+    return PolynomialRing.from(coefficients, n, q, helper: helper, isNtt: isNtt);
   }
 
   PolynomialMatrix vector(List<PolynomialRing> polynomials) {

@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
+
 import 'polynomial_ring.dart';
 
 
@@ -29,8 +31,9 @@ class PolynomialMatrix {
   factory PolynomialMatrix.fromList(
       List<PolynomialRing> elements,
       int rows,
-      int columns,
-      {bool strictSize = false}) {
+      int columns, {
+        bool strictSize = false
+      }) {
     if( strictSize == true && rows * columns != elements.length ) {
       throw Error();
     }
@@ -55,7 +58,16 @@ class PolynomialMatrix {
   }
 
   factory PolynomialMatrix.deserialize(
-      Uint8List byteArray, int rows, int columns, int wordSize, int n, int q) {
+      Uint8List byteArray,
+      int rows,
+      int columns,
+      int wordSize,
+      int n,
+      int q, {
+        bool isNtt = false,
+        Modulus modulusType = Modulus.regular,
+        NTTHelper? helper
+      }) {
     var coefficients = _decode(byteArray, wordSize);
 
     if(coefficients.length != rows*columns*n){
@@ -68,7 +80,14 @@ class PolynomialMatrix {
     var polynomials = <PolynomialRing>[];
     for (int i=0; i<rows; i++) {
       polynomials.add(
-          PolynomialRing.from(coefficients.sublist(i*n, (i+1)*n), n, q)
+          PolynomialRing.from(
+            coefficients.sublist(i*n, (i+1)*n),
+            n,
+            q,
+            isNtt: isNtt,
+            modulusType: modulusType,
+            helper: helper
+          )
       );
     }
     return PolynomialMatrix.vector(polynomials);
@@ -180,21 +199,20 @@ class PolynomialMatrix {
     return PolynomialMatrix.fromSquareMatrix(result);
   }
 
-
   PolynomialMatrix multiply(PolynomialMatrix other) {
     if (columns != other.rows) {
-      throw ArgumentError("Number of columns in the first matrix must be equal to the number of rows in the second matrix for multiplication.");
-    }
-    if (columns == 0) {
-      return this;
+      throw ArgumentError(
+          "Number of columns in the first matrix must be equal to the number of rows in the second matrix for multiplication.");
     }
 
     List<PolynomialRing> polynomials = [];
-    for (var i=0; i<rows; i++) {
-      for (var j=0; j<other.columns; j++) {
-        PolynomialRing sum = elementMatrix[i][0].multiply(other.elementMatrix[0][j]);
-        for (var k=1; k<columns; k++) {
-          sum = sum.plus(elementMatrix[i][k].multiply(other.elementMatrix[k][j]));
+    for (var i = 0; i < rows; i++) {
+      for (var j = 0; j < other.columns; j++) {
+        PolynomialRing sum = elementMatrix[i][0].multiply(
+            other.elementMatrix[0][j]);
+        for (var k = 1; k < columns; k++) {
+          var mult = elementMatrix[i][k].multiply(other.elementMatrix[k][j]);
+          sum = sum.plus(mult);
         }
         polynomials.add(sum);
       }
@@ -326,6 +344,35 @@ class PolynomialMatrix {
       }
     }
     return PolynomialMatrix.fromList(resultingPolynomials, rows, columns);
+  }
+
+  PolynomialMatrix toNtt() {
+    for (var row in elementMatrix) {
+      for (var poly in row) {
+        poly.toNtt();
+      }
+    }
+    return this;
+  }
+
+  PolynomialMatrix fromNtt() {
+    for (var row in elementMatrix) {
+      for (var poly in row) {
+        poly.fromNtt();
+      }
+    }
+    return this;
+  }
+
+  PolynomialMatrix copy() {
+    List<PolynomialRing> copiedPolynomials = [];
+    for (var row in elementMatrix) {
+      for (var poly in row) {
+        copiedPolynomials.add(poly.copy());
+      }
+    }
+
+    return PolynomialMatrix.fromList(copiedPolynomials, rows, columns);
   }
 
 }

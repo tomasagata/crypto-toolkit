@@ -1,9 +1,19 @@
 import 'dart:typed_data';
 
+import 'package:crypto_toolkit/core/bit_packing/bit_packing_helper.dart';
+import 'package:flutter/foundation.dart';
+
+import '../ntt/ntt_helper.dart';
+
+enum Modulus { regular, centered }
+
 class PolynomialRing {
   List<int> coefficients;
   int q;
   int n;
+  bool isNtt;
+  NTTHelper? helper;
+  Modulus modulusType;
 
 
   // --------- CONSTRUCTORS ---------
@@ -11,34 +21,61 @@ class PolynomialRing {
   ///
   /// The coefficient list does not need to be normalized.
   /// If [skipModulo] is set, the coefficients will be treated as-is.
-  factory PolynomialRing.from(List<int> coefficientList, int n, int q,
-      {bool skipModulo = false}) {
+  factory PolynomialRing.from(
+      List<int> coefficientList,
+      int n,
+      int q, {
+        bool isNtt = false,
+        Modulus modulusType = Modulus.regular,
+        NTTHelper? helper
+      }) {
     var normalizedCoefficients = _normalize(coefficientList, n);
 
-    if(!skipModulo){
+    if(modulusType == Modulus.regular){
       normalizedCoefficients = _moduloCoefs(normalizedCoefficients, q);
     }
 
-    return PolynomialRing._internal(normalizedCoefficients, n, q);
+    return PolynomialRing._internal(normalizedCoefficients, n, q, isNtt, helper: helper);
   }
 
-  factory PolynomialRing.zeros(int n, int q) {
-    return PolynomialRing._internal(List.filled(n, 0), n, q);
+  factory PolynomialRing.zeros(
+      int n,
+      int q, {
+        bool isNtt = false,
+        Modulus modulusType = Modulus.regular,
+        NTTHelper? helper
+      }) {
+    return PolynomialRing._internal(List.filled(n, 0), n, q, isNtt, helper: helper);
   }
 
   factory PolynomialRing.deserialize(
-      Uint8List byteArray, int wordSize, int n, int q) {
-    var coefficients = _decode(byteArray, wordSize);
+      Uint8List byteArray,
+      int wordSize,
+      int n,
+      int q, {
+        bool isNtt = false,
+        Modulus modulusType = Modulus.regular,
+        NTTHelper? helper,
+        Endian endianness = Endian.little
+      }) {
+    var coefficients = _decode(byteArray, wordSize, endianness);
 
     if(coefficients.length != n) {
       throw ArgumentError("Polynomial size n=$n was given but "
           "${coefficients.length} coefficients were found");
     }
 
-    return PolynomialRing.from(coefficients, n, q);
+    return PolynomialRing.from(coefficients, n, q, isNtt: isNtt, helper: helper);
   }
 
-  PolynomialRing._internal(this.coefficients, this.n, this.q);
+  PolynomialRing._internal(
+      this.coefficients,
+      this.n,
+      this.q,
+      this.isNtt, {
+        this.helper,
+        this.modulusType = Modulus.regular
+  });
 
 
 
@@ -49,14 +86,16 @@ class PolynomialRing {
   /// when [q] is even or in [-(q-1)/2; (q-1)/2] when [q] is odd.
   ///
   /// [x]' still holds that [x]' mod [q] = [x] mod [q].
-  int _centeredModularReduction(int x, int q) {
-    var halfQ = (q - 1) ~/ 2;
-    return ((x + halfQ) % q) - halfQ;
+  int _reduceModulus(int x, int a) {
+    int r = x % a;
+    if (r > (a >> 1)) r -= a;
+    return r;
   }
 
 
   (int r1, int r0) _decompose(int r, int alpha, int q) {
-    var r0 = _centeredModularReduction(r, alpha);
+    r = r % q;
+    var r0 = _reduceModulus(r, alpha);
     var r1 = r - r0;
     if(r1 == q - 1) return (0, r0 - 1);
     r1 = r1 ~/ alpha;
@@ -100,13 +139,17 @@ class PolynomialRing {
     List<int> bits = [];
 
     // Iterate through each word in the list
-    for (int word in words) {
+    for (int word in words.reversed) {
+      if (word < 0) {
+        throw ArgumentError("Cannot serialize negative numbers");
+      }
+
       // Convert the word to its binary representation
       String binaryString = word.toRadixString(2);
 
       // Pad the binary representation with leading zeros if necessary
       while (binaryString.length < wordSize) {
-        binaryString = '0$binaryString';
+        binaryString = "0$binaryString";
       }
 
       // Add the bits of the binary representation to the bits list
@@ -120,7 +163,7 @@ class PolynomialRing {
 
   /// Takes in a list of bits and returns
   /// a list of words of size [wordSize].
-  static List<int> _bitsToWords(List<int> bits, int wordSize) {
+  static List<int> _bitsToWords(List<int> bits, int wordSize, Endian endianness) {
     List<int> words = [];
 
     // Ensure that the number of bits is divisible evenly by the wordSize
@@ -141,14 +184,14 @@ class PolynomialRing {
       words.add(word);
     }
 
-    return words;
+    return (endianness == Endian.little) ? words.reversed.toList():  words;
   }
 
   /// Receives a list of <code>l*[w]/8</code> coefficients with values
   /// in {0, 1, ..., 255} and returns a list of <code>l</code>
   /// coefficients with values in {0, 1, ..., 2^[w] - 1}
-  static List<int> _decode(Uint8List encodedCoefficients, int w) {
-    return _bitsToWords(_wordsToBits(encodedCoefficients, 8), w);
+  static List<int> _decode(Uint8List encodedCoefficients, int w, Endian endianness) {
+    return _bitsToWords(_wordsToBits(encodedCoefficients, 8), w, endianness);
   }
 
 
@@ -176,8 +219,10 @@ class PolynomialRing {
   /// Receives a list of <code>l</code> coefficients with values
   /// in {0, 1, ..., 2^w - 1} and returns a list of <code>l*w/8</code>
   /// coefficients with values in {0, 1, ..., 255}
-  Uint8List _encode(List<int> coefficients, int w) {
-    return Uint8List.fromList(_bitsToWords(_wordsToBits(coefficients, w), 8));
+  Uint8List _encode(List<int> coefficients, int w, Endian endianness) {
+    return Uint8List.fromList(
+        _bitsToWords(_wordsToBits(coefficients, w), 8, endianness)
+    );
   }
 
   /// Divides [coefficients] by X^n + 1 and returns the remainder as a list of
@@ -224,13 +269,18 @@ class PolynomialRing {
   PolynomialRing plus(PolynomialRing g) {
     if (g.q != q) throw ArgumentError("g cannot have a different modulus q");
     if (g.n != n) throw ArgumentError("g cannot have a different n");
+    if (g.isNtt != isNtt) throw ArgumentError("Polynomials must be in either both ntt or neither to be added");
 
     List<int> resultingCoefficients = List.filled(n, 0);
     for (int i=0; i<n; i++){
-      resultingCoefficients[i] = (coefficients[i] + g.coefficients[i]) % q;
+      int temp = coefficients[i] + g.coefficients[i];
+      if (temp >= q){
+        temp -= q;
+      }
+      resultingCoefficients[i] = temp;
     }
 
-    return PolynomialRing.from(resultingCoefficients, n, q);
+    return PolynomialRing.from(resultingCoefficients, n, q, isNtt: isNtt, helper: helper);
   }
 
   /// Multiplies this polynomial by a and returns the result as a new polynomial.
@@ -242,7 +292,7 @@ class PolynomialRing {
       resultingCoefficients[i] %= q;
     }
 
-    return PolynomialRing.from(resultingCoefficients, n, q);
+    return PolynomialRing.from(resultingCoefficients, n, q, isNtt: isNtt, helper: helper);
   }
 
   /// Multiplies this polynomial by g and returns the result as a new polynomial.
@@ -253,6 +303,28 @@ class PolynomialRing {
     if (g.q != q) throw ArgumentError("g cannot have a different modulus q");
     if (g.n != n) throw ArgumentError("g cannot have a different n");
 
+    if (isNtt && g.isNtt) {
+      return nttMultiply(g);
+    } else if (!isNtt && !g.isNtt) {
+      return schoolbookMultiply(g);
+    }
+
+    throw ArgumentError("Both or neither polynomials must be in NTT form before multiplication");
+  }
+
+  PolynomialRing nttMultiply(PolynomialRing g) {
+    if (helper == null) {
+      throw StateError("Can only perform ntt reduction when parent element has an NTT Helper");
+    }
+    if (!isNtt || !g.isNtt) {
+      throw StateError("Can only multiply using NTT if both polynomials are in NTT form");
+    }
+
+    List<int> newCoefs = helper!.nttCoefficientMultiplication(coefficients, g.coefficients);
+    return PolynomialRing.from(newCoefs, n, q, isNtt: true, helper: helper);
+  }
+
+  PolynomialRing schoolbookMultiply(PolynomialRing g) {
     int resultingDegree = 2*(n-1);
     List<int> resultingCoefficients = List.filled(resultingDegree + 1, 0);
 
@@ -263,7 +335,21 @@ class PolynomialRing {
       }
     }
 
-    return PolynomialRing.from(_modulo(resultingCoefficients), n, q);
+    return PolynomialRing.from(_modulo(resultingCoefficients), n, q, isNtt: false, helper: helper);
+  }
+
+  PolynomialRing toNtt() {
+    if (helper == null) {
+      throw StateError("Can only perform NTT transform when parent element has an NTT Helper");
+    }
+    return helper!.toNtt(this);
+  }
+
+  PolynomialRing fromNtt() {
+    if (helper == null) {
+      throw StateError("Can only perform NTT transform when parent element has an NTT Helper");
+    }
+    return helper!.fromNtt(this);
   }
 
   /// Compresses this polynomial from modulo [q] down to [d] bits.
@@ -274,7 +360,7 @@ class PolynomialRing {
     for (var coef in coefficients) {
       compressedCoefficients.add(_compress(coef, d, q));
     }
-    return PolynomialRing.from(compressedCoefficients, n, q);
+    return PolynomialRing.from(compressedCoefficients, n, q, isNtt: isNtt, helper: helper);
   }
 
   /// Decompresses this polynomial from [d] bits to modulo [q].
@@ -285,19 +371,20 @@ class PolynomialRing {
     for (var coef in coefficients) {
       decompressedCoefficients.add(_decompress(coef, d, q));
     }
-    return PolynomialRing.from(decompressedCoefficients, n, q);
+    return PolynomialRing.from(decompressedCoefficients, n, q, isNtt: isNtt, helper: helper);
   }
 
   PolynomialRing minus(PolynomialRing g) {
     if (g.q != q) throw ArgumentError("g cannot have a different modulus q");
     if (g.n != n) throw ArgumentError("g cannot have a different n");
+    if (g.isNtt != isNtt) throw ArgumentError("Polynomials must be in either both ntt or neither to be subtracted");
 
     List<int> resultingCoefficients = List.filled(n, 0);
     for (int i=0; i < n; i++) {
       resultingCoefficients[i] = (coefficients[i] - g.coefficients[i]) % q;
     }
 
-    return PolynomialRing.from(resultingCoefficients, n, q);
+    return PolynomialRing.from(resultingCoefficients, n, q, isNtt: isNtt, helper: helper);
   }
 
   (PolynomialRing p1, PolynomialRing p0) power2Round(int d) {
@@ -305,14 +392,15 @@ class PolynomialRing {
     var p1Coefs = <int>[];
     var p0Coefs = <int>[];
     for (var r in coefficients){
-      var r0 = _centeredModularReduction(r, power2);
+      r = r % q;
+      var r0 = _reduceModulus(r, power2);
       p1Coefs.add((r - r0) >> d);
       p0Coefs.add(r0);
     }
 
     return (
-        PolynomialRing.from(p1Coefs, n, q),
-        PolynomialRing.from(p0Coefs, n, q, skipModulo: true)
+        PolynomialRing.from(p1Coefs, n, q, isNtt: isNtt, helper: helper),
+        PolynomialRing.from(p0Coefs, n, q, modulusType: Modulus.centered, isNtt: isNtt, helper: helper)
     );
   }
 
@@ -326,13 +414,13 @@ class PolynomialRing {
     }
 
     return (
-    PolynomialRing.from(p1Coefs, n, q),
-    PolynomialRing.from(p0Coefs, n, q, skipModulo: true)
+    PolynomialRing.from(p1Coefs, n, q, isNtt: isNtt, helper: helper),
+    PolynomialRing.from(p0Coefs, n, q, modulusType: Modulus.centered, isNtt: isNtt, helper: helper)
     );
   }
 
   Uint8List serialize(int w) {
-    return _encode(coefficients, w);
+    return BitPackingHelper.bytesFromInts(coefficients, w);
   }
 
   @override
@@ -345,6 +433,18 @@ class PolynomialRing {
       if (_checkNormBound(c, bound, q)) return true;
     }
     return false;
+  }
+
+  PolynomialRing copy() {
+    List<int> copiedCoefficients = [...coefficients];
+    return PolynomialRing.from(
+        copiedCoefficients,
+        n,
+        q,
+        modulusType: modulusType,
+        isNtt: isNtt,
+        helper: helper
+    );
   }
 
 }

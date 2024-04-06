@@ -4,6 +4,8 @@ import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_priva
 import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_public_key.dart';
 import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_signature.dart';
 import 'package:crypto_toolkit/algorithms/dilithium/generators/dilithium_key_generator.dart';
+import 'package:crypto_toolkit/core/factories/polynomial_factory.dart';
+import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring.dart';
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring_matrix.dart';
 import 'package:hashlib/hashlib.dart';
@@ -25,61 +27,74 @@ class Dilithium {
     required this.d,
     required this.k,
     required this.l,
+    required int eta,
+    required int etaBound,
+    required int tau,
     required this.omega,
     required this.gamma1,
-    required this.gamma2,
-    required this.beta,
-    required this.keyGenerator
-  });
+    required this.gamma2
+  }) :
+    beta = tau * eta,
+    polyFactory = PolynomialFactory(n: n, q: q, helper: NTTHelper.dilithium()),
+    keyGenerator = DilithiumKeyGenerator(
+      n: n,
+      q: q,
+      d: d,
+      k: k,
+      l: l,
+      eta: eta,
+      etaBound: etaBound,
+      tau: tau,
+      gamma1: gamma1,
+    );
+
+
 
   factory Dilithium.level2() {
     return Dilithium(
-        n: 256,
-        q: 8380417,
-        d: 13,
-        k: 4,
-        l: 4,
-        omega: 80,
-        gamma1: 131072,
-        gamma2: 95232,
-        beta: 39 * 2,
-        keyGenerator: DilithiumKeyGenerator(
-            n: 256, q: 8380417, d: 13, k: 4, l: 4, eta: 2, etaBound: 15, tau: 39, gamma1: 131072
-        )
+      n: 256,
+      q: 8380417,
+      d: 13,
+      k: 4,
+      l: 4,
+      eta: 2,
+      etaBound: 15,
+      tau: 39,
+      omega: 80,
+      gamma1: 131072,
+      gamma2: 95232
     );
   }
 
   factory Dilithium.level3() {
     return Dilithium(
-        n: 256,
-        q: 8380417,
-        d: 13,
-        k: 6,
-        l: 5,
-        omega: 55,
-        gamma1: 524288,
-        gamma2: 261888,
-        beta: 49 * 4,
-        keyGenerator: DilithiumKeyGenerator(
-            n: 256, q: 8380417, d: 13, k: 6, l: 5, eta: 4, etaBound: 9, tau: 49, gamma1: 524288
-        )
+      n: 256,
+      q: 8380417,
+      d: 13,
+      k: 6,
+      l: 5,
+      eta: 4,
+      etaBound: 9,
+      tau: 49,
+      omega: 55,
+      gamma1: 524288,
+      gamma2: 261888
     );
   }
 
   factory Dilithium.level5() {
     return Dilithium(
-        n: 256,
-        q: 8380417,
-        d: 13,
-        k: 8,
-        l: 7,
-        omega: 75,
-        gamma1: 524288,
-        gamma2: 261888,
-        beta: 60 * 2,
-        keyGenerator: DilithiumKeyGenerator(
-            n: 256, q: 8380417, d: 13, k: 8, l: 7, eta: 2, etaBound: 15, tau: 60, gamma1: 524288
-        )
+      n: 256,
+      q: 8380417,
+      d: 13,
+      k: 8,
+      l: 7,
+      eta: 2,
+      etaBound: 15,
+      tau: 60,
+      omega: 75,
+      gamma1: 524288,
+      gamma2: 261888
     );
   }
 
@@ -96,6 +111,7 @@ class Dilithium {
   int gamma2;
   int beta;
   DilithiumKeyGenerator keyGenerator;
+  PolynomialFactory polyFactory;
 
 
 
@@ -161,22 +177,23 @@ class Dilithium {
         int r1 = polynomialsV2[i].coefficients[j];
         int hint = 0;
 
-        int gamma2 = (alpha >>> 1);
+        int gamma2 = (alpha >> 1);
         bool condition1 = z0 <= gamma2;
         bool condition2 = z0 > (q - gamma2);
         bool condition3 = z0 == (q - gamma2) && r1 == 0;
         if (condition1 || condition2 || condition3){
           hint = 0;
+        } else {
+          hint = 1;
         }
-        hint = 1;
 
         coefs.add(hint);
       }
 
-      hintPolynomials.add(PolynomialRing.from(coefs, n, q));
+      hintPolynomials.add(polyFactory.ring(coefs));
     }
 
-    return PolynomialMatrix.fromList(hintPolynomials, rows, columns);
+    return polyFactory.matrix(hintPolynomials, rows, columns);
   }
 
   int _sumHint(PolynomialMatrix hint) {
@@ -224,10 +241,10 @@ class Dilithium {
         coefs.add((r1 + 1) % m);
       }
 
-      resultingPolynomials.add(PolynomialRing.from(coefs, n, q));
+      resultingPolynomials.add(polyFactory.ring(coefs));
     }
 
-    return PolynomialMatrix.fromList(resultingPolynomials, rows, columns);
+    return polyFactory.matrix(resultingPolynomials, rows, columns);
   }
 
 
@@ -256,7 +273,7 @@ class Dilithium {
   /// and deterministically generates a shared secret and ciphertext
   /// for the public key.
   DilithiumSignature sign(DilithiumPrivateKey sk, Uint8List message, {bool randomized = false}) {
-    var A = keyGenerator.expandA(sk.rho);
+    var A = keyGenerator.expandA(sk.rho, isNtt: true);
 
     var mu = _h( _join(sk.tr, message), 64);
     var kappa = 0;
@@ -268,35 +285,41 @@ class Dilithium {
       rhoPrime = _h( _join(sk.K, mu), 64);
     }
 
+    var s1Hat = sk.s1.copy().toNtt();
+    var s2Hat = sk.s2.copy().toNtt();
+    var t0Hat = sk.t0.copy().toNtt();
+
     var alpha = gamma2 << 1;
     while (true) {
       var y = keyGenerator.expandMask(rhoPrime, kappa);
+      var yHat = y.copy().toNtt();
 
       // Increment the nonce
       kappa += l;
 
-      var w = A.multiply(y);
+      var w = A.multiply(yHat).fromNtt();
 
       // Decompose w into its high and low bits.
       var (w1, w0) = w.decompose(alpha);
 
       Uint8List w1Bytes;
       if (gamma2 == 95232) { // Level 2
-        w1Bytes = w1.serialize(4);
-      } else { // Level 3 & 5
         w1Bytes = w1.serialize(6);
+      } else { // Level 3 & 5
+        w1Bytes = w1.serialize(4);
       }
 
       var cTilde = _h( _join(mu, w1Bytes), 32);
       var c = keyGenerator.sampleInBall(cTilde);
+      c.toNtt();
 
-      var z = y.plus(sk.s1.scale(c));
+      var z = y.plus(s1Hat.scale(c).fromNtt());
       if (z.checkNormBound(gamma1 - beta)) continue;
 
-      var w0MinusCS2 = w0.minus(sk.s2.scale(c));
+      var w0MinusCS2 = w0.minus(s2Hat.scale(c).fromNtt());
       if (w0MinusCS2.checkNormBound(gamma2 - beta)) continue;
 
-      var cT0 = sk.t0.scale(c);
+      var cT0 = t0Hat.scale(c).fromNtt();
       if (cT0.checkNormBound(gamma2)) continue;
 
       var w0MinusCS2PlusCT0 = w0MinusCS2.plus(cT0);
@@ -320,21 +343,32 @@ class Dilithium {
   /// with the given 32-byte z value calculated in the key-generation step.
   bool verify(DilithiumPublicKey pk, Uint8List message, DilithiumSignature signature) {
 
-    if ( _sumHint(signature.h) > omega ) return false;
+    var rho = pk.rho;
+    var t1 = pk.t1.copy();
 
-    if ( signature.z.checkNormBound(gamma1 - beta) ) return false;
+    var cTilde = Uint8List.fromList(signature.cTilde);
+    var z = signature.z.copy();
+    var h = signature.h.copy();
 
-    var A = keyGenerator.expandA(pk.rho);
+    if ( _sumHint(h) > omega ) return false;
+
+    if ( z.checkNormBound(gamma1 - beta) ) return false;
+
+    var A = keyGenerator.expandA(rho, isNtt: true);
     
     var tr = _h(pk.serialize(), 32);
     var mu = _h( _join(tr, message), 64);
-    var c = keyGenerator.sampleInBall(signature.cTilde);
+    var c = keyGenerator.sampleInBall(cTilde).toNtt();
 
-    var cT1 = pk.t1.scaleInt(1 << d).scale(c);
+    z.toNtt();
 
-    var azMinusCt1 = A.multiply(signature.z).minus(cT1);
+    t1 = t1.scaleInt(1 << d);
+    t1.toNtt();
 
-    var wPrime = _useHint(signature.h, azMinusCt1, 2*gamma2);
+    var azMinusCt1 = A.multiply(z).minus(t1.scale(c));
+    azMinusCt1.fromNtt();
+
+    var wPrime = _useHint(h, azMinusCt1, 2*gamma2);
     Uint8List wPrimeBytes;
     if (gamma2 == 95232) { // Level 2
       wPrimeBytes = wPrime.serialize(4);
@@ -342,7 +376,7 @@ class Dilithium {
       wPrimeBytes = wPrime.serialize(6);
     }
 
-    return signature.cTilde == _h( _join(mu, wPrimeBytes), 32);
+    return cTilde == _h( _join(mu, wPrimeBytes), 32);
   }
 
 }
