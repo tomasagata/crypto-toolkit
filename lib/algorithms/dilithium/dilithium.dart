@@ -142,13 +142,15 @@ class Dilithium {
   /// when [q] is even or in [-(q-1)/2; (q-1)/2] when [q] is odd.
   ///
   /// [x]' still holds that [x]' mod [q] = [x] mod [q].
-  int _centeredModularReduction(int x, int q) {
-    var halfQ = (q - 1) ~/ 2;
-    return ((x + halfQ) % q) - halfQ;
+  int _reduceModulus(int x, int a) {
+    int r = x % a;
+    if (r > (a >> 1)) r -= a;
+    return r;
   }
 
   (int r1, int r0) _decompose(int r, int alpha, int q) {
-    var r0 = _centeredModularReduction(r, alpha);
+    r = r % q;
+    var r0 = _reduceModulus(r, alpha);
     var r1 = r - r0;
     if(r1 == q - 1) return (0, r0 - 1);
     r1 = r1 ~/ alpha;
@@ -247,7 +249,16 @@ class Dilithium {
     return polyFactory.matrix(resultingPolynomials, rows, columns);
   }
 
+  bool _hashesMatch(Uint8List h1, Uint8List h2) {
+    if (h1.length != h2.length) return false;
 
+    for (int i=0; i<h1.length; i++) {
+      if (h1[i] != h2[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 
 
 
@@ -343,7 +354,7 @@ class Dilithium {
   /// with the given 32-byte z value calculated in the key-generation step.
   bool verify(DilithiumPublicKey pk, Uint8List message, DilithiumSignature signature) {
 
-    var rho = pk.rho;
+    var rho = Uint8List.fromList(pk.rho);
     var t1 = pk.t1.copy();
 
     var cTilde = Uint8List.fromList(signature.cTilde);
@@ -358,8 +369,9 @@ class Dilithium {
     
     var tr = _h(pk.serialize(), 32);
     var mu = _h( _join(tr, message), 64);
-    var c = keyGenerator.sampleInBall(cTilde).toNtt();
+    var c = keyGenerator.sampleInBall(cTilde);
 
+    c.toNtt();
     z.toNtt();
 
     t1 = t1.scaleInt(1 << d);
@@ -371,12 +383,12 @@ class Dilithium {
     var wPrime = _useHint(h, azMinusCt1, 2*gamma2);
     Uint8List wPrimeBytes;
     if (gamma2 == 95232) { // Level 2
-      wPrimeBytes = wPrime.serialize(4);
-    } else { // Level 3 & 5
       wPrimeBytes = wPrime.serialize(6);
+    } else { // Level 3 & 5
+      wPrimeBytes = wPrime.serialize(4);
     }
 
-    return cTilde == _h( _join(mu, wPrimeBytes), 32);
+    return _hashesMatch(cTilde, _h( _join(mu, wPrimeBytes), 32));
   }
 
 }

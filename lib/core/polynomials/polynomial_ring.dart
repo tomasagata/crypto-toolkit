@@ -35,7 +35,7 @@ class PolynomialRing {
       normalizedCoefficients = _moduloCoefs(normalizedCoefficients, q);
     }
 
-    return PolynomialRing._internal(normalizedCoefficients, n, q, isNtt, helper: helper);
+    return PolynomialRing._internal(normalizedCoefficients, n, q, isNtt, helper: helper, modulusType: modulusType);
   }
 
   factory PolynomialRing.zeros(
@@ -45,7 +45,7 @@ class PolynomialRing {
         Modulus modulusType = Modulus.regular,
         NTTHelper? helper
       }) {
-    return PolynomialRing._internal(List.filled(n, 0), n, q, isNtt, helper: helper);
+    return PolynomialRing._internal(List.filled(n, 0), n, q, isNtt, helper: helper, modulusType: modulusType);
   }
 
   factory PolynomialRing.deserialize(
@@ -58,14 +58,14 @@ class PolynomialRing {
         NTTHelper? helper,
         Endian endianness = Endian.little
       }) {
-    var coefficients = _decode(byteArray, wordSize, endianness);
+    var coefficients = BitPackingHelper.intsFromBytes(byteArray, wordSize);
 
     if(coefficients.length != n) {
       throw ArgumentError("Polynomial size n=$n was given but "
           "${coefficients.length} coefficients were found");
     }
 
-    return PolynomialRing.from(coefficients, n, q, isNtt: isNtt, helper: helper);
+    return PolynomialRing.from(coefficients, n, q, isNtt: isNtt, helper: helper, modulusType: modulusType);
   }
 
   PolynomialRing._internal(
@@ -133,67 +133,6 @@ class PolynomialRing {
     return results;
   }
 
-  /// Takes in a list of words of size [wordSize] and returns
-  /// a list of their bit representations.
-  static List<int> _wordsToBits(List<int> words, int wordSize) {
-    List<int> bits = [];
-
-    // Iterate through each word in the list
-    for (int word in words.reversed) {
-      if (word < 0) {
-        throw ArgumentError("Cannot serialize negative numbers");
-      }
-
-      // Convert the word to its binary representation
-      String binaryString = word.toRadixString(2);
-
-      // Pad the binary representation with leading zeros if necessary
-      while (binaryString.length < wordSize) {
-        binaryString = "0$binaryString";
-      }
-
-      // Add the bits of the binary representation to the bits list
-      for (int i = 0; i < wordSize; i++) {
-        bits.add(int.parse(binaryString[i]));
-      }
-    }
-
-    return bits;
-  }
-
-  /// Takes in a list of bits and returns
-  /// a list of words of size [wordSize].
-  static List<int> _bitsToWords(List<int> bits, int wordSize, Endian endianness) {
-    List<int> words = [];
-
-    // Ensure that the number of bits is divisible evenly by the wordSize
-    if (bits.length % wordSize != 0) {
-      throw ArgumentError('Number of bits is not divisible evenly by wordSize');
-    }
-
-    // Iterate through the bits list, extracting words of size wordSize
-    for (int i = 0; i < bits.length; i += wordSize) {
-      int word = 0;
-
-      // Extract wordSize number of bits from the bits list
-      for (int j = 0; j < wordSize; j++) {
-        word = (word << 1) | bits[i + j];
-      }
-
-      // Add the extracted word to the list of words
-      words.add(word);
-    }
-
-    return (endianness == Endian.little) ? words.reversed.toList():  words;
-  }
-
-  /// Receives a list of <code>l*[w]/8</code> coefficients with values
-  /// in {0, 1, ..., 255} and returns a list of <code>l</code>
-  /// coefficients with values in {0, 1, ..., 2^[w] - 1}
-  static List<int> _decode(Uint8List encodedCoefficients, int w, Endian endianness) {
-    return _bitsToWords(_wordsToBits(encodedCoefficients, 8), w, endianness);
-  }
-
 
 
 
@@ -214,15 +153,6 @@ class PolynomialRing {
   int _decompress(int y, int d, int q) {
     var compressionLimit = 1<<d; //2^d
     return ( (q / compressionLimit) * y ).round();
-  }
-
-  /// Receives a list of <code>l</code> coefficients with values
-  /// in {0, 1, ..., 2^w - 1} and returns a list of <code>l*w/8</code>
-  /// coefficients with values in {0, 1, ..., 255}
-  Uint8List _encode(List<int> coefficients, int w, Endian endianness) {
-    return Uint8List.fromList(
-        _bitsToWords(_wordsToBits(coefficients, w), 8, endianness)
-    );
   }
 
   /// Divides [coefficients] by X^n + 1 and returns the remainder as a list of
