@@ -68,20 +68,20 @@ class PolynomialMatrix {
         Modulus modulusType = Modulus.regular,
         NTTHelper? helper
       }) {
-    var coefficients = _decode(byteArray, wordSize);
-
-    if(coefficients.length != rows*columns*n){
-      throw ArgumentError(
-          "Cannot deserialize matrix of ${rows}x$columns with $coefficients "
-              "coefficients"
-      );
+    int bytesPerPolynomial = (n * wordSize / 8).ceil();
+    if(byteArray.length != rows * columns * bytesPerPolynomial) {
+      throw ArgumentError("Byte array size given ({$byteArray.length} bytes) "
+          "is different from the $bytesPerPolynomial required");
     }
 
     var polynomials = <PolynomialRing>[];
     for (int i=0; i<rows; i++) {
       polynomials.add(
-          PolynomialRing.from(
-            coefficients.sublist(i*n, (i+1)*n),
+          PolynomialRing.deserialize(
+            byteArray.sublist(
+                i*bytesPerPolynomial, (i+1)*bytesPerPolynomial
+            ),
+            wordSize,
             n,
             q,
             isNtt: isNtt,
@@ -100,68 +100,6 @@ class PolynomialMatrix {
 
 
   // --------- PRIVATE METHODS ---------
-
-  /// Takes in a list of words of size [wordSize] and returns
-  /// a list of their bit representations.
-  static List<int> _wordsToBits(List<int> words, int wordSize) {
-    List<int> bits = [];
-
-    // Iterate through each word in the list
-    for (int word in words) {
-      // Convert the word to its binary representation
-      String binaryString = word.toRadixString(2);
-
-      // Pad the binary representation with leading zeros if necessary
-      while (binaryString.length < wordSize) {
-        binaryString = '0$binaryString';
-      }
-
-      // Add the bits of the binary representation to the bits list
-      for (int i = 0; i < binaryString.length; i++) {
-        bits.add(int.parse(binaryString[i]));
-      }
-    }
-
-    return bits;
-  }
-
-  /// Takes in a list of bit representations and returns
-  /// a list of words of size [wordSize].
-  static List<int> _bitsToWords(List<int> bits, int wordSize) {
-    List<int> words = [];
-
-    // Calculate the number of bits needed to represent a word of size wordSize
-    int bitsPerWord = wordSize * bits.length;
-
-    // Ensure that the number of bits is divisible evenly by the wordSize
-    if (bitsPerWord % wordSize != 0) {
-      throw ArgumentError('Number of bits is not divisible evenly by wordSize');
-    }
-
-    // Iterate through the bits list, extracting words of size wordSize
-    for (int i = 0; i < bits.length; i += wordSize) {
-      int word = 0;
-
-      // Extract wordSize number of bits from the bits list
-      for (int j = 0; j < wordSize; j++) {
-        word = (word << 1) | bits[i + j];
-      }
-
-      // Add the extracted word to the list of words
-      words.add(word);
-    }
-
-    return words;
-  }
-
-
-
-  /// Receives a list of <code>l*[w]/8</code> coefficients with values
-  /// in {0, 1, ..., 255} and returns a list of <code>l</code>
-  /// coefficients with values in {0, 1, ..., 2^[w] - 1}
-  static List<int> _decode(Uint8List encodedCoefficients, int w) {
-    return _bitsToWords(_wordsToBits(encodedCoefficients, w), 8);
-  }
 
 
 
@@ -373,6 +311,41 @@ class PolynomialMatrix {
     }
 
     return PolynomialMatrix.fromList(copiedPolynomials, rows, columns);
+  }
+
+  PolynomialMatrix map(
+      PolynomialRing Function(PolynomialRing poly) toElement, {
+      bool inPlace = false
+  }) {
+    List<List<PolynomialRing>> matrix = elementMatrix;
+    if(!inPlace) {
+      matrix = List.generate(rows, (i) =>
+        List.generate(columns, (j) =>
+            elementMatrix[i][j].copy()
+        )
+      );
+    }
+
+    for (int i=0; i<rows; i++) {
+      for (int j=0; j<columns; j++) {
+        matrix[i][j] = toElement(matrix[i][j]);
+      }
+    }
+
+    if(inPlace) {
+      return this;
+    }
+    return PolynomialMatrix._internal(matrix);
+  }
+
+  PolynomialMatrix mapCoefficients(
+      int Function(int coef) toElement, {
+      bool inPlace = false
+  }) {
+    return map(
+        (poly) => poly.map(toElement, inPlace: true),
+        inPlace: inPlace
+    );
   }
 
 }

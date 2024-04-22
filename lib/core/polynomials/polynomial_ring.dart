@@ -377,4 +377,24 @@ class PolynomialRing {
     );
   }
 
+  PolynomialRing map(
+      int Function(int coef) toElement, {
+      bool inPlace = false
+  }) {
+    List<int> coeffs = coefficients;
+    if(!inPlace) {
+      coeffs = List.from(coefficients);
+    }
+
+    for (int i=0; i<coeffs.length; i++) {
+      coeffs[i] = toElement(coeffs[i]);
+    }
+
+    if(inPlace) {
+      return this;
+    }
+    return PolynomialRing._internal(coeffs, n, q, isNtt,
+        modulusType: modulusType, helper: helper);
+  }
+
 }

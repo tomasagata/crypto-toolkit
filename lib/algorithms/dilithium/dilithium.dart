@@ -260,6 +260,18 @@ class Dilithium {
     return true;
   }
 
+  Uint8List _serializeW(PolynomialMatrix w) {
+    Uint8List wBytes;
+    if (gamma2 == 95232) { // Level 2
+      wBytes = w.serialize(6);
+    } else if(gamma2 == 261888) { // Level 3 & 5
+      wBytes = w.serialize(4);
+    } else {
+      throw ArgumentError("Expected gamma2 to be (q-1)/88 or (q-1)/32");
+    }
+    return wBytes;
+  }
+
 
 
 
@@ -313,12 +325,7 @@ class Dilithium {
       // Decompose w into its high and low bits.
       var (w1, w0) = w.decompose(alpha);
 
-      Uint8List w1Bytes;
-      if (gamma2 == 95232) { // Level 2
-        w1Bytes = w1.serialize(6);
-      } else { // Level 3 & 5
-        w1Bytes = w1.serialize(4);
-      }
+      Uint8List w1Bytes = _serializeW(w1);
 
       var cTilde = _h( _join(mu, w1Bytes), 32);
       var c = keyGenerator.sampleInBall(cTilde);
@@ -381,12 +388,7 @@ class Dilithium {
     azMinusCt1.fromNtt();
 
     var wPrime = _useHint(h, azMinusCt1, 2*gamma2);
-    Uint8List wPrimeBytes;
-    if (gamma2 == 95232) { // Level 2
-      wPrimeBytes = wPrime.serialize(6);
-    } else { // Level 3 & 5
-      wPrimeBytes = wPrime.serialize(4);
-    }
+    Uint8List wPrimeBytes = _serializeW(wPrime);
 
     return _hashesMatch(cTilde, _h( _join(mu, wPrimeBytes), 32));
   }

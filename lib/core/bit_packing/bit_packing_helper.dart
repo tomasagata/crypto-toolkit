@@ -3,7 +3,7 @@ import 'dart:typed_data';
 class BitPackingHelper {
 
   static List<int> intsFromBytes(Uint8List bytes, int bitSize) {
-    List<int> numbers = List.filled((bytes.length * bitSize / 8).floor(), 0);
+    List<int> numbers = List.filled((bytes.length * 8 / bitSize).floor(), 0);
     int numberBitsLeft = bitSize;
     int bytesBitsLeft = 8;
     int numIndex = 0;
