@@ -1,31 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import 'home_page.dart';
-import 'settings_page.dart';
+class AppLayout extends StatelessWidget {
+  const AppLayout(this.navigationShell, {super.key});
 
-class AppLayout extends StatefulWidget {
-  const AppLayout({super.key});
-
-  @override
-  State<AppLayout> createState() => _AppLayoutState();
-}
-
-class _AppLayoutState extends State<AppLayout> {
-  var _selectedIndex = 0;
+  /// The navigation shell and container for the branch Navigators.
+  final StatefulNavigationShell navigationShell;
 
   @override
   Widget build(BuildContext context) {
-    Widget page;
-    switch (_selectedIndex) {
-      case 0:
-        page = const HomePage();
-        break;
-      case 1:
-        page = const SettingsPage();
-        break;
-      default:
-        throw UnimplementedError("No page for destination index $_selectedIndex");
-    }
 
     return Scaffold(
       body: SafeArea(
@@ -34,25 +17,46 @@ class _AppLayoutState extends State<AppLayout> {
             NavigationRail(
               elevation: 1,
               labelType: NavigationRailLabelType.all,
-              onDestinationSelected: (destinationIndex) {
-                setState(() {
-                  _selectedIndex = destinationIndex;
-                });
-              },
-              selectedIndex: _selectedIndex,
+              onDestinationSelected: _onTap,
+              selectedIndex: navigationShell.currentIndex,
               destinations: [
                 NavigationRailDestination(
-                  icon: const Icon(Icons.home),
-                  label: Text("Inicio",
-                    style: Theme.of(context).textTheme.labelSmall)),
-                const NavigationRailDestination(
-                  icon: Icon(Icons.settings),
-                  label: Text("Configuración"))
+                  icon: const Icon(Icons.functions),
+                  label: SizedBox(
+                    width: 70,
+                    child: Text("Learning with Errors",
+                      style: Theme.of(context).textTheme.labelSmall,
+                      textAlign: TextAlign.center),
+                  )),
+                NavigationRailDestination(
+                    icon: const Icon(Icons.https),
+                    label: Text("Kyber PKE",
+                        style: Theme.of(context).textTheme.labelSmall)),
+                NavigationRailDestination(
+                    icon: const Icon(Icons.key),
+                    label: Text("Kyber",
+                        style: Theme.of(context).textTheme.labelSmall)),
+                NavigationRailDestination(
+                    icon: const Icon(Icons.verified_user),
+                    label: Text("Dilithium",
+                        style: Theme.of(context).textTheme.labelSmall)),
             ]),
-            Expanded(child: page)
+            Expanded(child: navigationShell)
           ],
         ),
       ),
     );
   }
+
+  void _onTap(index) {
+    navigationShell.goBranch(
+      index,
+      // A common pattern when using bottom navigation bars is to support
+      // navigating to the initial location when tapping the item that is
+      // already active. This example demonstrates how to support this behavior,
+      // using the initialLocation parameter of goBranch.
+      initialLocation: index == navigationShell.currentIndex,
+    );
+  }
+
 }
