@@ -101,7 +101,7 @@ class Kyber {
   /// its SHA3-512 hash split in two.
   (Uint8List lower32Bytes, Uint8List upper32Bytes) _g(Uint8List seed) {
     var bytes = sha3_512.convert(seed).bytes;
-    return (bytes.sublist(0, 256), bytes.sublist(256));
+    return (bytes.sublist(0, 32), bytes.sublist(32));
   }
 
   /// Joins two byte arrays A and B together.

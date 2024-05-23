@@ -29,12 +29,12 @@ class AppLayout extends StatelessWidget {
                       textAlign: TextAlign.center),
                   )),
                 NavigationRailDestination(
-                    icon: const Icon(Icons.https),
-                    label: Text("Kyber PKE",
-                        style: Theme.of(context).textTheme.labelSmall)),
-                NavigationRailDestination(
                     icon: const Icon(Icons.key),
                     label: Text("Kyber",
+                        style: Theme.of(context).textTheme.labelSmall)),
+                NavigationRailDestination(
+                    icon: const Icon(Icons.https),
+                    label: Text("Kyber PKE",
                         style: Theme.of(context).textTheme.labelSmall)),
                 NavigationRailDestination(
                     icon: const Icon(Icons.verified_user),

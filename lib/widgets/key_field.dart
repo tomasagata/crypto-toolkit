@@ -1,180 +1,124 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:crypto_toolkit/widgets/security_level_field.dart';
 import 'package:flutter/material.dart';
 
-class KeyFieldSwitch extends StatefulWidget {
-  const KeyFieldSwitch({
+import '../algorithms/kyber/kyber.dart';
+import 'key_action_field.dart';
+
+class KyberKeyField extends StatelessWidget {
+  const KyberKeyField({
     super.key,
-    required this.selected,
-    this.onSelectionChanged
+    required this.keyAction,
+    required this.securityLevel
   });
 
-  final KeyFieldAction selected;
-  final void Function(KeyFieldAction)? onSelectionChanged;
-
-  @override
-  State<KeyFieldSwitch> createState() => _KeyFieldSwitchState();
-}
-
-enum KeyFieldAction {
-  generate,
-  useExisting
-}
-
-class _KeyFieldSwitchState extends State<KeyFieldSwitch> {
+  final KeyAction keyAction;
+  final KyberSecurityLevel securityLevel;
 
 
-  @override
-  Widget build(BuildContext context) {
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints.tightFor(width: 310),
-      child: SegmentedButton<KeyFieldAction>(
-          selected: <KeyFieldAction>{widget.selected},
-          onSelectionChanged: (newSelection) {
-            if (widget.onSelectionChanged != null) {
-              widget.onSelectionChanged!(newSelection.first);
-            }
-          },
-          segments: const [
-            ButtonSegment(value: KeyFieldAction.generate, label: Text("Generate")),
-            ButtonSegment(value: KeyFieldAction.useExisting, label: Text("Use existing")),
-          ]),
-    );
-  }
-}
-
-class KeyFieldInput extends StatelessWidget {
-  const KeyFieldInput({super.key, required this.action});
-
-  final KeyFieldAction action;
-
-  @override
-  Widget build(BuildContext context) {
-
-    if (action == KeyFieldAction.generate) {
-      return buildKeyGenerationField(context);
-    } else if (action == KeyFieldAction.useExisting) {
-      return buildExistingKeysField(context);
-    } else {
-      throw UnimplementedError();
+  void generateKeys() {
+    if (_seed == null){
+      throw ArgumentError("Nonce must be non-null");
     }
+
+    var paddedSeed = Uint8List(64);
+    for (int i=0; i<_seed!.length; i++) {
+      paddedSeed[i] = _seed![i];
+    }
+
+    Kyber kyberInstance;
+    if(securityLevel == KyberSecurityLevel.level2) {
+      kyberInstance = Kyber.kem512();
+    } else if (securityLevel == KyberSecurityLevel.level3) {
+      kyberInstance = Kyber.kem768();
+    } else if (securityLevel == KyberSecurityLevel.level4) {
+      kyberInstance = Kyber.kem1024();
+    } else {
+      throw UnimplementedError("Security level not implemented");
+    }
+
+    var (pk, sk, _) = kyberInstance.generateKeys(paddedSeed);
+
+    setState(() {
+      _publicKey = pk;
+      _pkController.text = base64Encode(pk.serialize());
+      _privateKey = sk;
+      _skController.text = base64Encode(sk.serialize());
+    });
   }
 
-  Widget buildKeyGenerationField(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 10,
+          runSpacing: 5,
           children: [
-            const TextField(
-              autocorrect: false,
-              maxLines: 1,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  label: Text("Seed (hexadecimal)"),
-                  constraints: BoxConstraints(
-                    minWidth: 0.0,
-                    maxWidth: 400,
-                    minHeight: 0.0,
-                    maxHeight: 200,
-                  ),
-                  alignLabelWithHint: true
-              ),
+            SeedField(
+              onChanged: (seed) {
+                try {
+                  var seedBytes = base64Decode(seed);
+
+                  setState(() {
+                    _seed = seedBytes;
+                    _seedError = false;
+                  });
+                } catch (error) {
+                  setState(() {
+                    _seed = null;
+                    _seedError = true;
+                  });
+                }
+              },
             ),
-            // FilledButton(
-            //     onPressed: onPressed,
-            //     child: const Text("Generate")
-            // )
+            FilledButton(
+                onPressed: generateKeys,
+                child: const Text("Generate")
+            )
           ],
         ),
-
-        const Wrap(
-          spacing: 70,
-          runSpacing: 30,
-          crossAxisAlignment: WrapCrossAlignment.start,
-          children: [
-            TextField(
-              autocorrect: false,
-              maxLines: 5,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  label: Text("Private key"),
-                  constraints: BoxConstraints(
-                    minWidth: 0.0,
-                    maxWidth: 400,
-                    minHeight: 0.0,
-                    maxHeight: 200,
-                  ),
-                  alignLabelWithHint: true
-              ),
-            ),
-            TextField(
-              autocorrect: false,
-              maxLines: 5,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  label: Text("Public key"),
-                  constraints: BoxConstraints(
-                    minWidth: 0.0,
-                    maxWidth: 400,
-                    minHeight: 0.0,
-                    maxHeight: 200,
-                  ),
-                  alignLabelWithHint: true
-              ),
-            ),
-          ]
-        )
       ],
     );
   }
-
-  Widget buildExistingKeysField(BuildContext context) {
-
-    return const Wrap(
-      spacing: 70,
-      runSpacing: 30,
-      crossAxisAlignment: WrapCrossAlignment.start,
-      children: [
-        TextField(
-          autocorrect: false,
-          maxLines: 5,
-          enableSuggestions: false,
-          decoration: InputDecoration(
-              border: OutlineInputBorder(),
-              label: Text("Private key"),
-              constraints: BoxConstraints(
-                minWidth: 0.0,
-                maxWidth: 400,
-                minHeight: 0.0,
-                maxHeight: 200,
-              ),
-              alignLabelWithHint: true
-          ),
-        ),
-        TextField(
-          autocorrect: false,
-          maxLines: 5,
-          enableSuggestions: false,
-          decoration: InputDecoration(
-              border: OutlineInputBorder(),
-              label: Text("Public key"),
-              constraints: BoxConstraints(
-                minWidth: 0.0,
-                maxWidth: 400,
-                minHeight: 0.0,
-                maxHeight: 200,
-              ),
-              alignLabelWithHint: true
-          ),
-        ),
-      ]
-    );
-  }
-
 }
 
+class SeedField extends StatelessWidget {
+  const SeedField({
+    super.key,
+    required this.onChanged,
+    this.error = false
+  });
+
+  final void Function(String) onChanged;
+  final bool error;
+
+  @override
+  Widget build(BuildContext context) {
+
+    return TextField(
+      autocorrect: false,
+      maxLines: 1,
+      enableSuggestions: false,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+          error: error? const Text("Please enter a valid seed") : null,
+          border: const OutlineInputBorder(),
+          label: const Text("Seed (hexadecimal)"),
+          constraints: const BoxConstraints(
+            minWidth: 0.0,
+            maxWidth: 400,
+            minHeight: 0.0,
+            maxHeight: 200,
+          ),
+          alignLabelWithHint: true
+      ),
+    );
+  }
+}
 

@@ -1,57 +1,67 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+
 enum KyberSecurityLevel {
-  level2,
-  level3,
-  level4
+  level2(2),
+  level3(3),
+  level4(4);
+
+  const KyberSecurityLevel(this.value);
+  final int value;
 }
 
-// class KyberSecurityLevelField extends StatelessWidget {
-//   const KyberSecurityLevelField({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//
-//     return ConstrainedBox(
-//       constraints: const BoxConstraints.tightFor(width: 310),
-//       child: SegmentedButton<KeyFieldAction>(
-//           selected: <KeyFieldAction>{widget.selected},
-//           onSelectionChanged: (newSelection) {
-//             if (widget.onSelectionChanged != null) {
-//               widget.onSelectionChanged!(newSelection.first);
-//             }
-//           },
-//           segments: const [
-//             ButtonSegment(value: KeyFieldAction.generate, label: Text("Generate")),
-//             ButtonSegment(value: KeyFieldAction.useExisting, label: Text("Use existing")),
-//           ]),
-//     );
-//   }
-// }
+class KyberSecurityLevelFormField extends FormBuilderField<KyberSecurityLevel> {
+  KyberSecurityLevelFormField({
+    super.key,
+    required super.name
+  }) : super (
+    initialValue: KyberSecurityLevel.level2,
+    builder: (FormFieldState<KyberSecurityLevel> field) {
+
+      return SegmentedButton<KyberSecurityLevel>(
+          selected: <KyberSecurityLevel>{field.value!},
+          onSelectionChanged: (newSelection) {
+            field.didChange(newSelection.first);
+          },
+          segments: const [
+            ButtonSegment(value: KyberSecurityLevel.level2, label: Text("Level 2")),
+            ButtonSegment(value: KyberSecurityLevel.level3, label: Text("Level 3")),
+            ButtonSegment(value: KyberSecurityLevel.level4, label: Text("Level 4")),
+          ]
+      );
+    }
+  );
+
+
+}
 
 enum DilithiumSecurityLevel {
-  level2,
-  level3,
-  level5
+  level2(2),
+  level3(3),
+  level5(5);
+
+  const DilithiumSecurityLevel(this.value);
+  final int value;
 }
 
-// class DilithiumSecurityLevelField extends StatelessWidget {
-//   const DilithiumSecurityLevelField({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//
-//     return SegmentedButton<DilithiumSecurityLevel>(
-//       selected: <DilithiumSecurityLevel>{_securityLevel},
-//       onSelectionChanged: (newSelection) {
-//         setState(() {
-//           _securityLevel = newSelection.first;
-//         });
-//       },
-//       segments: const [
-//         ButtonSegment(value: DilithiumSecurityLevel.level2, label: Text("Level 2")),
-//         ButtonSegment(value: DilithiumSecurityLevel.level3, label: Text("Level 3")),
-//         ButtonSegment(value: DilithiumSecurityLevel.level5, label: Text("Level 5")),
-//       ]
-//     );
-//   }
-//
-// }
+class DilithiumSecurityLevelFormField extends FormBuilderField<DilithiumSecurityLevel> {
+  DilithiumSecurityLevelFormField({
+    super.key,
+    required super.name
+  }) : super (
+    initialValue: DilithiumSecurityLevel.level2,
+    builder: (FormFieldState<DilithiumSecurityLevel> state) {
+      return SegmentedButton<DilithiumSecurityLevel>(
+        selected: <DilithiumSecurityLevel>{state.value!},
+        onSelectionChanged: (newSelection) {
+          state.didChange(newSelection.first);
+        },
+        segments: const [
+          ButtonSegment(value: DilithiumSecurityLevel.level2, label: Text("Level 2")),
+          ButtonSegment(value: DilithiumSecurityLevel.level3, label: Text("Level 3")),
+          ButtonSegment(value: DilithiumSecurityLevel.level5, label: Text("Level 5")),
+        ]
+      );
+    }
+  );
+}
