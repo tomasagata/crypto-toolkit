@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
@@ -131,7 +132,9 @@ class DilithiumSignature {
 
     return hBytes;
   }
-
+  
+  
+  String get base64 => base64Encode(serialize());
 
   Uint8List serialize() {
     int l = z.rows, k = h.rows, gamma1, omega, zWordSize;

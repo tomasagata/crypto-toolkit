@@ -1,10 +1,44 @@
+import 'dart:convert';
+import 'package:crypto_toolkit/algorithms/kyber/kyber.dart';
 import 'package:crypto_toolkit/dto/kyber_flow_details.dart';
+import 'package:crypto_toolkit/widgets/security_level_field.dart';
 import 'package:flutter/material.dart';
 
 class KyberResultsPage extends StatefulWidget {
   const KyberResultsPage(this.flowDetails, {super.key});
 
   final KyberFlowDetails flowDetails;
+
+  (String cipher, String clientKey, String serverKey) generateFlow() {
+
+    Kyber kyberInstance;
+    if(flowDetails.securityLevel == KyberSecurityLevel.level2) {
+      kyberInstance = Kyber.kem512();
+    } else if (flowDetails.securityLevel == KyberSecurityLevel.level3) {
+      kyberInstance = Kyber.kem768();
+    } else if (flowDetails.securityLevel == KyberSecurityLevel.level4) {
+      kyberInstance = Kyber.kem1024();
+    } else {
+      throw UnimplementedError("Security level not implemented");
+    }
+
+    var (pkeCipher, clientSharedSecret) = kyberInstance.encapsulate(
+      flowDetails.publicKey,
+      flowDetails.nonce
+    );
+    var serverSharedKey = kyberInstance.decapsulate(
+        flowDetails.publicKey,
+        flowDetails.privateKey,
+        pkeCipher,
+        flowDetails.nonce
+    );
+
+    return (
+      pkeCipher.base64,
+      base64Encode(clientSharedSecret),
+      base64Encode(serverSharedKey)
+    );
+  }
 
   @override
   State<KyberResultsPage> createState() => _KyberResultsPageState();
@@ -20,10 +54,12 @@ class _KyberResultsPageState extends State<KyberResultsPage> {
   void initState() {
     super.initState();
 
+    var (cipher, clientSharedKey, serverSharedKey) = widget.generateFlow();
+
     // Set textFields to their values
-    cipherFieldController.text = widget.flowDetails.cipher;
-    clientKeyFieldController.text = widget.flowDetails.clientSharedKey;
-    serverKeyFieldController.text = widget.flowDetails.serverSharedKey;
+    cipherFieldController.text = cipher;
+    clientKeyFieldController.text = clientSharedKey;
+    serverKeyFieldController.text = serverSharedKey;
   }
 
   @override

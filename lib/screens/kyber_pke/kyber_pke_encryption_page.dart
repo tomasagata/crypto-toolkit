@@ -1,4 +1,17 @@
+import 'dart:convert';
+
+import 'package:convert/convert.dart';
+import 'package:crypto_toolkit/algorithms/kyber/abstractions/pke_public_key.dart';
+import 'package:crypto_toolkit/algorithms/kyber/kyber.dart';
+import 'package:crypto_toolkit/algorithms/kyber/kyber_pke/kyber_pke.dart';
+import 'package:crypto_toolkit/widgets/key_field.dart';
+import 'package:crypto_toolkit/widgets/message_field.dart';
+import 'package:crypto_toolkit/widgets/nonce_field.dart';
+import 'package:crypto_toolkit/widgets/security_level_field.dart';
+import 'package:crypto_toolkit/widgets/seed_field.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 class KyberPKEEncryptionPage extends StatefulWidget {
   const KyberPKEEncryptionPage({super.key});
@@ -7,184 +20,267 @@ class KyberPKEEncryptionPage extends StatefulWidget {
   State<KyberPKEEncryptionPage> createState() => _KyberPKEEncryptionPageState();
 }
 
-enum _KyberSecurityLevel {
-  level2,
-  level3,
-  level4
-}
-
-enum _ServerKeysAction {
-  generate,
-  useExisting
-}
-
 class _KyberPKEEncryptionPageState extends State<KyberPKEEncryptionPage> {
-  var _securityLevel = _KyberSecurityLevel.level2;
-  var _keysAction = _ServerKeysAction.useExisting;
+  final _pkController = TextEditingController();
+  final _msgController = TextEditingController();
+  final _encryptedMsgController = TextEditingController();
+  final _formKey = GlobalKey<FormBuilderState>();
+  final _seedFormKey = GlobalKey<FormBuilderState>();
+
+  final Map<String, dynamic> initValues = {
+    "securityLevel": KyberSecurityLevel.level2
+  };
+
+  String? validatePublicKey(String? pk) {
+    KyberSecurityLevel securityLevel = _seedFormKey.currentState!.value["securityLevel"];
+    String? errorMsg;
+    try {
+      PKEPublicKey.deserialize(
+          base64Decode(pk!),
+          securityLevel.value
+      );
+    } catch (e) {
+      errorMsg = "Invalid public key.";
+    }
+    return errorMsg;
+  }
+
+  void generateKeys(Uint8List seed, KyberSecurityLevel securityLevel) {
+    var paddedSeed = Uint8List(64);
+    for (int i=0; i<seed.length; i++) {
+      paddedSeed[i] = seed[i];
+    }
+
+    Kyber kyberInstance;
+    if(securityLevel == KyberSecurityLevel.level2) {
+      kyberInstance = Kyber.kem512();
+    } else if (securityLevel == KyberSecurityLevel.level3) {
+      kyberInstance = Kyber.kem768();
+    } else if (securityLevel == KyberSecurityLevel.level4) {
+      kyberInstance = Kyber.kem1024();
+    } else {
+      throw UnimplementedError("Security level not implemented");
+    }
+
+    var (pk, _, _) = kyberInstance.generateKeys(paddedSeed);
+
+    setState(() {
+      _pkController.text = base64Encode(pk.serialize());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+
     return Align(
       alignment: Alignment.topLeft,
-      child: ListView(
-          padding: const EdgeInsets.fromLTRB(40, 25, 40, 25),
-          children: [
-            Text("Kyber Encryption", style: Theme
-                .of(context)
-                .textTheme
-                .displayLarge),
-            const SizedBox(height: 16),
+      child: FormBuilder(
+        key: _formKey,
+        initialValue: initValues,
+        child: ListView(
+            cacheExtent: double.infinity,
+            padding: const EdgeInsets.fromLTRB(40, 25, 40, 25),
+            children: [
+              Text("Kyber Encryption", style: Theme
+                  .of(context)
+                  .textTheme
+                  .displayLarge),
+              const SizedBox(height: 16),
 
-            Text(
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
-                "sed do eiusmod tempor incididunt ut labore et dolore magna"
-                " aliqua. Ut enim ad minim veniam, quis nostrud exercitation "
-                "ullamco laboris nisi ut aliquip ex ea commodo consequat. "
-                "Duis aute irure dolor in reprehenderit in voluptate velit "
-                "esse cillum dolore eu fugiat nulla pariatur. Excepteur sint "
-                "occaecat cupidatat non proident, sunt in culpa qui officia "
-                "deserunt mollit anim id est laborum. Lorem ipsum dolor sit "
-                "amet, consectetur adipiscing elit, sed do eiusmod tempor "
-                "incididunt ut labore et dolore magna aliqua. Ut enim ad minim"
-                " veniam, quis nostrud exercitation ullamco laboris nisi ut "
-                "aliquip ex ea commodo consequat.Duis aute irure dolor in "
-                "reprehenderit in voluptate velit esse cillum dolore eu "
-                "fugiat nulla pariatur. Excepteur sint occaecat cupidatat "
-                "non proident, sunt in culpa qui officia deserunt mollit anim"
-                " id est laborum. Lorem ipsum dolor sit amet, consectetur "
-                "adipiscing elit, sed do eiusmod tempor incididunt ut labore"
-                " et dolore magna aliqua. Ut enim ad minim veniam, quis nostr"
-                "ud exercitation ullamco laboris nisi ut aliquip ex ea commod"
-                "o consequat. Duis aute irure dolor in reprehenderit in volup"
-                "tate velit esse cillum dolore eu fugiat nulla pariatur. "
-                "Excepteur sint occaecat cupidatat non proident, sunt in "
-                "culpa qui officia deserunt mollit anim id est laborum",
-                style: Theme
-                    .of(context)
-                    .textTheme
-                    .bodyLarge),
-            const SizedBox(height: 78),
+              Text(
+                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
+                  "sed do eiusmod tempor incididunt ut labore et dolore magna"
+                  " aliqua. Ut enim ad minim veniam, quis nostrud exercitation "
+                  "ullamco laboris nisi ut aliquip ex ea commodo consequat. "
+                  "Duis aute irure dolor in reprehenderit in voluptate velit "
+                  "esse cillum dolore eu fugiat nulla pariatur. Excepteur sint "
+                  "occaecat cupidatat non proident, sunt in culpa qui officia "
+                  "deserunt mollit anim id est laborum. Lorem ipsum dolor sit "
+                  "amet, consectetur adipiscing elit, sed do eiusmod tempor "
+                  "incididunt ut labore et dolore magna aliqua. Ut enim ad minim"
+                  " veniam, quis nostrud exercitation ullamco laboris nisi ut "
+                  "aliquip ex ea commodo consequat.Duis aute irure dolor in "
+                  "reprehenderit in voluptate velit esse cillum dolore eu "
+                  "fugiat nulla pariatur. Excepteur sint occaecat cupidatat "
+                  "non proident, sunt in culpa qui officia deserunt mollit anim"
+                  " id est laborum. Lorem ipsum dolor sit amet, consectetur "
+                  "adipiscing elit, sed do eiusmod tempor incididunt ut labore"
+                  " et dolore magna aliqua. Ut enim ad minim veniam, quis nostr"
+                  "ud exercitation ullamco laboris nisi ut aliquip ex ea commod"
+                  "o consequat. Duis aute irure dolor in reprehenderit in volup"
+                  "tate velit esse cillum dolore eu fugiat nulla pariatur. "
+                  "Excepteur sint occaecat cupidatat non proident, sunt in "
+                  "culpa qui officia deserunt mollit anim id est laborum",
+                  style: Theme
+                      .of(context)
+                      .textTheme
+                      .bodyLarge),
+              const SizedBox(height: 78),
 
-            Text("Security level", style: Theme
-                .of(context)
-                .textTheme
-                .titleLarge),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SegmentedButton<_KyberSecurityLevel>(
-                  selected: <_KyberSecurityLevel>{_securityLevel},
-                  onSelectionChanged: (newSelection) {
-                    setState(() {
-                      _securityLevel = newSelection.first;
-                    });
-                  },
-                  segments: const [
-                    ButtonSegment(value: _KyberSecurityLevel.level2,
-                        label: Text("Level 2")),
-                    ButtonSegment(value: _KyberSecurityLevel.level3,
-                        label: Text("Level 3")),
-                    ButtonSegment(value: _KyberSecurityLevel.level4,
-                        label: Text("Level 4")),
-                  ]),
-            ),
-            const SizedBox(height: 35),
+              FormBuilder(
+                  key: _seedFormKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Security level", style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 14),
+                      Align(
+                          alignment: Alignment.centerLeft,
+                          child: KyberSecurityLevelFormField(name: "securityLevel")
+                      ),
+                      const SizedBox(height: 35),
 
-            Text("Keys", style: Theme
-                .of(context)
-                .textTheme
-                .titleLarge),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints.tightFor(width: 310),
-                child: SegmentedButton<_ServerKeysAction>(
-                    selected: <_ServerKeysAction>{_keysAction},
-                    onSelectionChanged: (newSelection) {
+                      Text("Server keys", style: Theme.of(context).textTheme.titleLarge),
+
+                      const SizedBox(height: 25),
+
+                      Text(
+                          "Generate keys from a seed...",
+                          style: Theme.of(context).textTheme.bodyLarge),
+
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 10,
+                        runSpacing: 5,
+                        children: [
+                          SeedField.kyber(name: "seed"),
+                          FilledButton(
+                            onPressed: () {
+                              if (!_seedFormKey.currentState!.saveAndValidate()) {
+                                return;
+                              }
+
+                              if (_seedFormKey.currentState!.value["seed"].isEmpty){
+                                _seedFormKey
+                                    .currentState!
+                                    .fields["seed"]
+                                    ?.invalidate("Seed cannot be empty");
+                                return;
+                              }
+
+                              var seed = hex.decode(_seedFormKey.currentState!.value["seed"]);
+                              var securityLevel = _seedFormKey.currentState!.value["securityLevel"];
+                              generateKeys(Uint8List.fromList(seed), securityLevel);
+                            },
+                            child: const Text("Generate"),
+                          )
+                        ],
+                      ),
+                    ],
+                  )
+              ),
+
+              const SizedBox(height: 25),
+
+              Align(
+                alignment: Alignment.topLeft,
+                child: KyberKeyField.publicKey(
+                    name: "publicKey",
+                    controller: _pkController,
+                    validator: validatePublicKey,
+                    onIconPress: () {
+                      Clipboard.setData(ClipboardData(text: _pkController.text));
+                    }
+                )
+              ),
+              const SizedBox(height: 35),
+
+              Text("Nonce", style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 14),
+              Align(
+                  alignment: Alignment.centerLeft,
+                  child: NonceField(name: "nonce",)
+              ),
+              const SizedBox(height: 35),
+
+
+              Text("Message", style: Theme
+                  .of(context)
+                  .textTheme
+                  .titleLarge),
+              const SizedBox(height: 14),
+              MessageField.kyber(
+                name: "message",
+                controller: _msgController,
+                onIconPress: () {
+                  Clipboard.setData(ClipboardData(text: _msgController.text));
+                }
+              ),
+
+              const SizedBox(height: 60),
+
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton(
+                    onPressed: () {
+                      if (!_seedFormKey.currentState!.saveAndValidate()){
+                        return;
+                      }
+
+                      if (!_formKey.currentState!.saveAndValidate()){
+                        return;
+                      }
+
+                      KyberSecurityLevel securityLevel = _seedFormKey
+                          .currentState!.value["securityLevel"];
+
+                      var pkBytes = base64Decode(
+                          _formKey.currentState!.value["publicKey"]
+                      );
+                      var pk = PKEPublicKey.deserialize(pkBytes, securityLevel.value);
+
+                      var nonce = _formKey.currentState!.value["nonce"];
+
+                      var msg = _formKey.currentState!.value["message"];
+
+                      KyberPKE kyberInstance;
+                      if(securityLevel == KyberSecurityLevel.level2) {
+                        kyberInstance = KyberPKE.pke512();
+                      } else if (securityLevel == KyberSecurityLevel.level3) {
+                        kyberInstance = KyberPKE.pke768();
+                      } else if (securityLevel == KyberSecurityLevel.level4) {
+                        kyberInstance = KyberPKE.pke1024();
+                      } else {
+                        throw UnimplementedError("Security level not implemented");
+                      }
+
+                      var cipher = kyberInstance.encrypt(pk, msg, nonce);
+
                       setState(() {
-                        _keysAction = newSelection.first;
+                        _encryptedMsgController.text = cipher.base64;
                       });
                     },
-                    segments: const [
-                      ButtonSegment(value: _ServerKeysAction.generate,
-                          label: Text("Generate")),
-                      ButtonSegment(value: _ServerKeysAction.useExisting,
-                          label: Text("Use existing")),
-                    ]),
+                    child: const Text("Encrypt")
+                ),
               ),
-            ),
+              const SizedBox(height: 80),
 
-            const SizedBox(height: 25),
-
-            const TextField(
-              autocorrect: false,
-              maxLines: 5,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  label: Text("Public key (base64)"),
-                  constraints: BoxConstraints(
-                    maxHeight: 200,
-                  ),
-                  alignLabelWithHint: true
+              Text("Result", style: Theme
+                  .of(context)
+                  .textTheme
+                  .titleLarge),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _encryptedMsgController,
+                autocorrect: false,
+                minLines: null,
+                maxLines: null,
+                expands: true,
+                enableSuggestions: false,
+                readOnly: true,
+                decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    label: Text("Encrypted message"),
+                    constraints: BoxConstraints(
+                      maxHeight: 200,
+                    ),
+                    alignLabelWithHint: true
+                ),
               ),
-            ),
+              const SizedBox(height: 80),
 
-
-            const SizedBox(height: 35),
-
-            Text("Message", style: Theme
-                .of(context)
-                .textTheme
-                .titleLarge),
-            const SizedBox(height: 14),
-            const TextField(
-              autocorrect: false,
-              maxLines: 5,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  label: Text("Message"),
-                  constraints: BoxConstraints(
-                    maxHeight: 200,
-                  ),
-                  alignLabelWithHint: true
-              ),
-            ),
-
-            const SizedBox(height: 60),
-
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton(
-                  onPressed: () {},
-                  child: const Text("Encrypt")
-              ),
-            ),
-            const SizedBox(height: 80),
-
-            Text("Result", style: Theme
-                .of(context)
-                .textTheme
-                .titleLarge),
-            const SizedBox(height: 14),
-            const TextField(
-              autocorrect: false,
-              maxLines: 5,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  label: Text("Encrypted message"),
-                  constraints: BoxConstraints(
-                    maxHeight: 200,
-                  ),
-                  alignLabelWithHint: true
-              ),
-            ),
-            const SizedBox(height: 80),
-
-          ]),
+            ]),
+      ),
     );
   }
 }

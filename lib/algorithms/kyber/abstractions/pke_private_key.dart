@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring_matrix.dart';
@@ -9,8 +10,8 @@ class PKEPrivateKey {
     return PKEPrivateKey._internal(s);
   }
 
-  factory PKEPrivateKey.deserialize(Uint8List byteArray, int n, int k, int q) {
-    var s = PolynomialMatrix.deserialize(byteArray, k, 1, 12, n, q);
+  factory PKEPrivateKey.deserialize(Uint8List byteArray, int kyberVersion) {
+    var s = PolynomialMatrix.deserialize(byteArray, kyberVersion, 1, 12, 256, 3329);
     return PKEPrivateKey._internal(s);
   }
 
@@ -24,6 +25,8 @@ class PKEPrivateKey {
 
 
   // ------------ PUBLIC API ------------
+
+  String get base64 => base64Encode(serialize());
 
   Uint8List serialize() {
     return s.serialize(12);

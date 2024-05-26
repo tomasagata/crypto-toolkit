@@ -1,45 +1,55 @@
-// import 'package:flutter/material.dart';
-//
-// class NonceField extends StatelessWidget {
-//   NonceField({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//
-//     return TextFormField(
-//       autocorrect: false,
-//       maxLines: 1,
-//       enableSuggestions: false,
-//       onChanged: (nonce) {
-//         print(nonce);
-//         try {
-//           Uint8List nonceBytes = base64Decode(nonce);
-//           print(utf8.decode(nonceBytes));
-//           setState(() {
-//             _nonce = nonceBytes;
-//             _nonceError = false;
-//           });
-//         } catch (error) {
-//           print(error);
-//           setState(() {
-//             _nonce = null;
-//             _nonceError = true;
-//           });
-//         }
-//       },
-//       decoration: InputDecoration(
-//           error: _nonceError ? const Text("Nonce must be in base64") : null,
-//           border: const OutlineInputBorder(),
-//           label: const Text("nonce (hexadecimal)"),
-//           constraints: const BoxConstraints(
-//             minWidth: 0.0,
-//             maxWidth: 400,
-//             minHeight: 0.0,
-//             maxHeight: 200,
-//           ),
-//           alignLabelWithHint: true
-//       ),
-//     );
-//   }
-//
-// }
+import 'package:convert/convert.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+
+class NonceField extends FormBuilderTextField {
+  NonceField({
+    super.key,
+    required super.name,
+  }) : super (
+    valueTransformer: (String? nonceString) {
+      if (nonceString == null || nonceString.isEmpty) {
+        return null;
+      }
+      Uint8List paddedNonce = Uint8List(32);
+      var actualNonce = Uint8List.fromList(hex.decode(nonceString));
+
+      for (int i=0; i<actualNonce.length; i++) {
+        paddedNonce[i] = actualNonce[i];
+      }
+
+      return paddedNonce;
+    },
+    autocorrect: false,
+    maxLines: 1,
+    enableSuggestions: false,
+    maxLength: 64,
+    initialValue: "",
+    maxLengthEnforcement: MaxLengthEnforcement.enforced,
+    decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        label: Text("nonce (hex)"),
+        constraints: BoxConstraints(
+          minWidth: 0.0,
+          maxWidth: 400,
+          minHeight: 0.0,
+          maxHeight: 200,
+        ),
+        alignLabelWithHint: true
+    ),
+    validator: (nonce) {
+      if (nonce == null || nonce == "") {
+        return "Invalid Nonce.";
+      }
+
+      String? errorMsg;
+      try {
+        hex.decode(nonce);
+      } on Exception {
+        errorMsg = "Invalid nonce";
+      }
+      return errorMsg;
+    }
+  );
+}

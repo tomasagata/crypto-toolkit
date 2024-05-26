@@ -1,4 +1,17 @@
+import 'dart:convert';
+
+import 'package:convert/convert.dart';
+import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_public_key.dart';
+import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_signature.dart';
+import 'package:crypto_toolkit/algorithms/dilithium/dilithium.dart';
+import 'package:crypto_toolkit/widgets/key_field.dart';
+import 'package:crypto_toolkit/widgets/message_field.dart';
+import 'package:crypto_toolkit/widgets/security_level_field.dart';
+import 'package:crypto_toolkit/widgets/seed_field.dart';
+import 'package:crypto_toolkit/widgets/signature_field.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 class DilithiumVerifyPage extends StatefulWidget {
   const DilithiumVerifyPage({super.key});
@@ -7,27 +20,77 @@ class DilithiumVerifyPage extends StatefulWidget {
   State<DilithiumVerifyPage> createState() => _DilithiumVerifyPageState();
 }
 
-enum _DilithiumSecurityLevel {
-  level2,
-  level3,
-  level5
-}
-
-enum _KeysAction {
-  generate,
-  useExisting
-}
 
 class _DilithiumVerifyPageState extends State<DilithiumVerifyPage> {
-  var _securityLevel = _DilithiumSecurityLevel.level2;
-  var _keysAction = _KeysAction.useExisting;
+  final _pkController = TextEditingController();
+  final _messageController = TextEditingController();
+  final _signatureController = TextEditingController();
+  final _validityFieldController = TextEditingController();
+  final _formKey = GlobalKey<FormBuilderState>();
+  final _seedFormKey = GlobalKey<FormBuilderState>();
+
+
+  String? validatePublicKey(String? pk) {
+    DilithiumSecurityLevel securityLevel = _seedFormKey.currentState!.value["securityLevel"];
+    String? errorMsg;
+    try {
+      DilithiumPublicKey.deserialize(
+          base64Decode(pk!),
+          securityLevel.value
+      );
+    } catch (e) {
+      errorMsg = "Invalid public key.";
+    }
+    return errorMsg;
+  }
+
+  String? validateSignature(String? signature) {
+    DilithiumSecurityLevel securityLevel = _seedFormKey.currentState!.value["securityLevel"];
+    String? errorMsg;
+    try {
+      DilithiumSignature.deserialize(
+          base64Decode(signature!),
+          securityLevel.value
+      );
+    } catch (e) {
+      errorMsg = "Invalid signature.";
+    }
+    return errorMsg;
+  }
+
+  void generateKeys(Uint8List seed, DilithiumSecurityLevel securityLevel) {
+    var paddedSeed = Uint8List(32);
+    for (int i=0; i<seed.length; i++) {
+      paddedSeed[i] = seed[i];
+    }
+
+    Dilithium dilithiumInstance;
+    if(securityLevel == DilithiumSecurityLevel.level2) {
+      dilithiumInstance = Dilithium.level2();
+    } else if (securityLevel == DilithiumSecurityLevel.level3) {
+      dilithiumInstance = Dilithium.level3();
+    } else if (securityLevel == DilithiumSecurityLevel.level5) {
+      dilithiumInstance = Dilithium.level5();
+    } else {
+      throw UnimplementedError("Security level not implemented");
+    }
+
+    var (pk, _) = dilithiumInstance.generateKeys(paddedSeed);
+
+    setState(() {
+      _pkController.text = base64Encode(pk.serialize());
+    });
+  }
 
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.topLeft,
-      child: ListView(
+      child: FormBuilder(
+        key: _formKey,
+        child: ListView(
+          cacheExtent:  double.infinity,
           padding: const EdgeInsets.fromLTRB(40, 25, 40, 25),
           children: [
             Text("Dilithium Verify", style: Theme
@@ -66,70 +129,68 @@ class _DilithiumVerifyPageState extends State<DilithiumVerifyPage> {
                     .bodyLarge),
             const SizedBox(height: 78),
 
-            Text("Security level", style: Theme
-                .of(context)
-                .textTheme
-                .titleLarge),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SegmentedButton<_DilithiumSecurityLevel>(
-                  selected: <_DilithiumSecurityLevel>{_securityLevel},
-                  onSelectionChanged: (newSelection) {
-                    setState(() {
-                      _securityLevel = newSelection.first;
-                    });
-                  },
-                  segments: const [
-                    ButtonSegment(value: _DilithiumSecurityLevel.level2,
-                        label: Text("Level 2")),
-                    ButtonSegment(value: _DilithiumSecurityLevel.level3,
-                        label: Text("Level 3")),
-                    ButtonSegment(value: _DilithiumSecurityLevel.level5,
-                        label: Text("Level 5")),
-                  ]),
-            ),
-            const SizedBox(height: 35),
+            FormBuilder(
+                key: _seedFormKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Security level", style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 14),
+                    Align(
+                        alignment: Alignment.centerLeft,
+                        child: DilithiumSecurityLevelFormField(name: "securityLevel")
+                    ),
+                    const SizedBox(height: 35),
 
-            Text("Keys", style: Theme
-                .of(context)
-                .textTheme
-                .titleLarge),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints.tightFor(width: 310),
-                child: SegmentedButton<_KeysAction>(
-                    selected: <_KeysAction>{_keysAction},
-                    onSelectionChanged: (newSelection) {
-                      setState(() {
-                        _keysAction = newSelection.first;
-                      });
-                    },
-                    segments: const [
-                      ButtonSegment(value: _KeysAction.generate,
-                          label: Text("Generate")),
-                      ButtonSegment(value: _KeysAction.useExisting,
-                          label: Text("Use existing")),
-                    ]),
-              ),
+                    Text("Server keys", style: Theme.of(context).textTheme.titleLarge),
+
+                    const SizedBox(height: 25),
+
+                    Text(
+                        "Generate keys from a seed...",
+                        style: Theme.of(context).textTheme.bodyLarge),
+
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 10,
+                      runSpacing: 5,
+                      children: [
+                        SeedField.dilithium(name: "seed"),
+                        FilledButton(
+                          onPressed: () {
+                            if (!_seedFormKey.currentState!.saveAndValidate()) {
+                              return;
+                            }
+
+                            if (_seedFormKey.currentState!.value["seed"].isEmpty){
+                              _seedFormKey
+                                  .currentState!
+                                  .fields["seed"]
+                                  ?.invalidate("Seed cannot be empty");
+                              return;
+                            }
+
+                            var seed = hex.decode(_seedFormKey.currentState!.value["seed"]);
+                            var securityLevel = _seedFormKey.currentState!.value["securityLevel"];
+                            generateKeys(Uint8List.fromList(seed), securityLevel);
+                          },
+                          child: const Text("Generate"),
+                        )
+                      ],
+                    ),
+                  ],
+                )
             ),
 
             const SizedBox(height: 25),
 
-            const TextField(
-              autocorrect: false,
-              maxLines: 5,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  label: Text("Public key (base64)"),
-                  constraints: BoxConstraints(
-                    maxHeight: 200,
-                  ),
-                  alignLabelWithHint: true
-              ),
+            DilithiumKeyField.publicKey(
+                name: "publicKey",
+                controller: _pkController,
+                validator: validatePublicKey,
+                onIconPress: () {
+                  Clipboard.setData(ClipboardData(text: _pkController.text));
+                }
             ),
 
 
@@ -140,18 +201,12 @@ class _DilithiumVerifyPageState extends State<DilithiumVerifyPage> {
                 .textTheme
                 .titleLarge),
             const SizedBox(height: 14),
-            const TextField(
-              autocorrect: false,
-              maxLines: 5,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  label: Text("Message"),
-                  constraints: BoxConstraints(
-                    maxHeight: 200,
-                  ),
-                  alignLabelWithHint: true
-              ),
+            MessageField.dilithium(
+                name: "message",
+                controller: _messageController,
+                onIconPress: () {
+                  Clipboard.setData(ClipboardData(text: _messageController.text));
+                }
             ),
 
             const SizedBox(height: 60),
@@ -161,18 +216,13 @@ class _DilithiumVerifyPageState extends State<DilithiumVerifyPage> {
                 .textTheme
                 .titleLarge),
             const SizedBox(height: 14),
-            const TextField(
-              autocorrect: false,
-              maxLines: 5,
-              enableSuggestions: false,
-              decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  label: Text("Signature"),
-                  constraints: BoxConstraints(
-                    maxHeight: 200,
-                  ),
-                  alignLabelWithHint: true
-              ),
+            SignatureField(
+                name: "signature",
+                controller: _signatureController,
+                validator: validateSignature,
+                onIconPress: () {
+                  Clipboard.setData(ClipboardData(text: _messageController.text));
+                }
             ),
 
             const SizedBox(height: 60),
@@ -180,13 +230,79 @@ class _DilithiumVerifyPageState extends State<DilithiumVerifyPage> {
             Align(
               alignment: Alignment.centerLeft,
               child: FilledButton(
-                  onPressed: () {},
-                  child: const Text("Verify")
+                child: const Text("Verify"),
+                onPressed: () {
+                  if (!_seedFormKey.currentState!.saveAndValidate()){
+                    return;
+                  }
+
+                  if (!_formKey.currentState!.saveAndValidate()){
+                    return;
+                  }
+
+                  DilithiumSecurityLevel securityLevel = _seedFormKey
+                      .currentState!.value["securityLevel"];
+
+                  var pkBytes = base64Decode(_formKey.currentState!.value["publicKey"]);
+                  var pk = DilithiumPublicKey
+                      .deserialize(pkBytes, securityLevel.value);
+
+                  var message = _formKey.currentState!.value["message"];
+
+                  var signatureBytes = base64Decode(
+                      _formKey.currentState!.value["signature"]);
+                  var signature = DilithiumSignature
+                      .deserialize(signatureBytes, securityLevel.value);
+
+
+                  Dilithium dilithiumInstance;
+                  if(securityLevel == DilithiumSecurityLevel.level2) {
+                    dilithiumInstance = Dilithium.level2();
+                  } else if (securityLevel == DilithiumSecurityLevel.level3) {
+                    dilithiumInstance = Dilithium.level3();
+                  } else if (securityLevel == DilithiumSecurityLevel.level5) {
+                    dilithiumInstance = Dilithium.level5();
+                  } else {
+                    throw UnimplementedError("Security level not implemented");
+                  }
+
+                  var isValid = dilithiumInstance.verify(pk, message, signature);
+
+                  setState(() {
+                    _validityFieldController.text = isValid.toString();
+                  });
+                },
               ),
             ),
             const SizedBox(height: 80),
 
-          ]),
+            Text("Result", style: Theme
+                .of(context)
+                .textTheme
+                .titleLarge),
+            const SizedBox(height: 14),
+            TextField(
+              autocorrect: false,
+              minLines: null,
+              maxLines: null,
+              expands: true,
+              controller: _validityFieldController,
+              enableSuggestions: false,
+              decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  label: Text("Is valid?"),
+                  constraints: BoxConstraints(
+                    maxHeight: 200,
+                  ),
+                  alignLabelWithHint: true
+              ),
+            ),
+
+            const SizedBox(height: 80),
+
+          ]
+        ),
+      ),
     );
   }
 }

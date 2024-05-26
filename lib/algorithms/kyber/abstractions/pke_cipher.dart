@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring.dart';
@@ -14,13 +15,35 @@ class PKECypher {
   });
 
   factory PKECypher.deserialize(
-      Uint8List byteArray, int n, int k, int q, int du, int dv) {
-    var sizeU = (du * k * n / 8).round();
+      Uint8List byteArray, int kyberVersion) {
+    int du, dv;
+    switch (kyberVersion) {
+      case 2:
+        du = 10;
+        dv = 4;
+        break;
+      case 3:
+        du = 10;
+        dv = 4;
+        break;
+      case 4:
+        du = 11;
+        dv = 5;
+        break;
+      default:
+        throw UnimplementedError("Unknown kyber security level.");
+    }
+
+    var sizeU = (du * kyberVersion * 256 / 8).round();
     var serializedU = byteArray.sublist(0, sizeU);
     var serializedV = byteArray.sublist(sizeU);
 
-    var u = PolynomialMatrix.deserialize(serializedU, k, 1, du, n, q).decompress(du);
-    var v = PolynomialRing.deserialize(serializedV, dv, n, q).decompress(dv);
+    var u = PolynomialMatrix
+        .deserialize(serializedU, kyberVersion, 1, du, 256, 3329)
+        .decompress(du);
+    var v = PolynomialRing
+        .deserialize(serializedV, dv, 256, 3329)
+        .decompress(dv);
 
     return PKECypher(u: u, v: v, du: du, dv: dv);
   }
@@ -40,10 +63,12 @@ class PKECypher {
 
   // -------------- PUBLIC API --------------
 
+  String get base64 => base64Encode(serialize());
+
   Uint8List serialize() {
     // COMPRESS AND SERIALIZE
     var serializedU = u.compress(du).serialize(du);
-    var serializedV = u.compress(dv).serialize(dv);
+    var serializedV = v.compress(dv).serialize(dv);
 
     // SERIALIZED_CYPHER = SERIALIZED_U || SERIALIZED_V
     var serializedCypher = BytesBuilder();

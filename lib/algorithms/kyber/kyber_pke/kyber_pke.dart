@@ -34,6 +34,24 @@ class KyberPKE {
     return KyberPKE._internal(n: n, k: k, q: q, du: du, dv: dv, keyGenerator: keyGenerator);
   }
 
+  factory KyberPKE.pke512() {
+    return KyberPKE(
+        n: 256, k: 2, q: 3329, eta1: 3, eta2: 2, du: 10, dv: 4
+    );
+  }
+
+  factory KyberPKE.pke768() {
+    return KyberPKE(
+        n: 256, k: 3, q: 3329, eta1: 2, eta2: 2, du: 10, dv: 4
+    );
+  }
+
+  factory KyberPKE.pke1024() {
+    return KyberPKE(
+        n: 256, k: 4, q: 3329, eta1: 2, eta2: 2, du: 11, dv: 5
+    );
+  }
+
   KyberPKE._internal({
     required this.n,
     required this.k,

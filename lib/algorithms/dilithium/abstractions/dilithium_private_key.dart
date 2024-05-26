@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
@@ -110,6 +111,9 @@ class DilithiumPrivateKey {
     return t0Prime.serialize(13);
   }
 
+
+
+  String get base64 => base64Encode(serialize());
 
   Uint8List serialize() {
     int l = s1.rows, eta, sWordSize;

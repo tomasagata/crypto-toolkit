@@ -13,7 +13,15 @@ enum KyberSecurityLevel {
 class KyberSecurityLevelFormField extends FormBuilderField<KyberSecurityLevel> {
   KyberSecurityLevelFormField({
     super.key,
-    required super.name
+    required super.name,
+    super.autovalidateMode,
+    super.enabled,
+    super.validator,
+    super.restorationId,
+    super.valueTransformer,
+    super.onChanged,
+    super.onReset,
+    super.focusNode,
   }) : super (
     initialValue: KyberSecurityLevel.level2,
     builder: (FormFieldState<KyberSecurityLevel> field) {
@@ -47,10 +55,19 @@ enum DilithiumSecurityLevel {
 class DilithiumSecurityLevelFormField extends FormBuilderField<DilithiumSecurityLevel> {
   DilithiumSecurityLevelFormField({
     super.key,
-    required super.name
+    required super.name,
+    super.autovalidateMode,
+    super.enabled,
+    super.validator,
+    super.restorationId,
+    super.valueTransformer,
+    super.onChanged,
+    super.onReset,
+    super.focusNode,
   }) : super (
     initialValue: DilithiumSecurityLevel.level2,
     builder: (FormFieldState<DilithiumSecurityLevel> state) {
+
       return SegmentedButton<DilithiumSecurityLevel>(
         selected: <DilithiumSecurityLevel>{state.value!},
         onSelectionChanged: (newSelection) {
