@@ -67,6 +67,8 @@ flutter:
      - assets/images/kyber_kem_flow.jpg
      - assets/images/lwe-pre-noise.png
      - assets/images/lwe-post-noise.png
+     - assets/images/lattice_background.webp
+     - assets/images/black-lattice-background.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

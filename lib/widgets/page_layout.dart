@@ -18,7 +18,7 @@ class TitleSection extends StatelessWidget {
   Widget build(BuildContext context) {
 
     return AspectRatio(
-      aspectRatio: 16 / 9,
+      aspectRatio: 19 / 9,
       child: Stack(
         children: [
           _buildParallaxBackground(context),
@@ -37,8 +37,8 @@ class TitleSection extends StatelessWidget {
         backgroundImageKey: _backgroundImageKey,
       ),
       children: [
-        Image.network(
-          "https://docs.flutter.dev/cookbook/img-files/effects/parallax/01-mount-rushmore.jpg",
+        Image.asset(
+          backgroundImage,
           key: _backgroundImageKey,
           fit: BoxFit.cover,
         ),
@@ -54,7 +54,7 @@ class TitleSection extends StatelessWidget {
             colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            stops: const [0.8, 0.95],
+            stops: const [0.75, 1],
           ),
         ),
       ),

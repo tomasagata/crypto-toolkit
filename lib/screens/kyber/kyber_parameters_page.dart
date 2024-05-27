@@ -94,7 +94,7 @@ class _KyberParametersPageState extends State<KyberParametersPage> {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            TitleSection(title: "Kyber", backgroundImage: "assets/images/kyber_kem_flow.jpg"),
+            TitleSection(title: "Kyber", backgroundImage: "assets/images/black-lattice-background.jpg"),
             const SizedBox(height: 16),
 
             FormBuilder(

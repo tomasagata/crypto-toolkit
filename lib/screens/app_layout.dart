@@ -41,7 +41,17 @@ class AppLayout extends StatelessWidget {
                     label: Text("Dilithium",
                         style: Theme.of(context).textTheme.labelSmall)),
             ]),
-            Expanded(child: navigationShell)
+            Container(
+              color: Colors.blueGrey,
+              height: double.infinity,
+              width: 0.25,
+            ),
+            Expanded(
+                child: Container(
+                    color: Colors.white70,
+                    child: navigationShell
+                )
+            )
           ],
         ),
       ),
