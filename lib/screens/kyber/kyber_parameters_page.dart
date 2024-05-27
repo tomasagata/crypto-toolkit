@@ -91,173 +91,179 @@ class _KyberParametersPageState extends State<KyberParametersPage> {
 
     return Align(
       alignment: Alignment.topLeft,
-      child: FormBuilder(
-        key: _formKey,
-        initialValue: initValues,
-        child: ListView(
-          cacheExtent: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 25),
+      child: SingleChildScrollView(
+        child: Column(
           children: [
             TitleSection(title: "Kyber", backgroundImage: "assets/images/kyber_kem_flow.jpg"),
-            //
-            // Text("Kyber", style: Theme.of(context).textTheme.displayLarge),
             const SizedBox(height: 16),
 
-            Text(
-                "Kyber is a quantum-resistant key encapsulation mechanism or KEM. "
-                "It uses the learning with errors problem as a mathematical "
-                "basis to provide its cryptographic strength. A KEM is a "
-                "mechanism that allows two parties to safely obtain a shared "
-                "secret over a possibly unsafe medium.",
-                style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 78),
-
-            Center(
-              child: Container(
-                constraints: const BoxConstraints(
-                  maxWidth:  805,
-                  maxHeight: 498,
-                ),
-                color: Colors.red,
-                child: const Image(
-                  image: AssetImage("assets/images/kyber_kem_flow.jpg"),
-                ),
-              ),
-            ),
-            const SizedBox(height: 75),
-
             FormBuilder(
-              key: _seedFormKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Security level", style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 14),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: KyberSecurityLevelFormField(name: "securityLevel")
-                  ),
-                  const SizedBox(height: 35),
+              key: _formKey,
+              initialValue: initValues,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 25),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        "Kyber is a quantum-resistant key encapsulation mechanism or KEM. "
+                        "It uses the learning with errors problem as a mathematical "
+                        "basis to provide its cryptographic strength. A KEM is a "
+                        "mechanism that allows two parties to safely obtain a shared "
+                        "secret over a possibly unsafe medium.",
+                        style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height: 78),
 
-                  Text("Server keys", style: Theme.of(context).textTheme.titleLarge),
+                    Center(
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          maxWidth:  805,
+                          maxHeight: 498,
+                        ),
+                        color: Colors.red,
+                        child: const Image(
+                          image: AssetImage("assets/images/kyber_kem_flow.jpg"),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 75),
 
-                  const SizedBox(height: 25),
+                    FormBuilder(
+                      key: _seedFormKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Security level", style: Theme.of(context).textTheme.titleLarge),
+                          const SizedBox(height: 14),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: KyberSecurityLevelFormField(name: "securityLevel")
+                          ),
+                          const SizedBox(height: 35),
 
-                  Text(
-                      "Generate keys from a seed...",
-                      style: Theme.of(context).textTheme.bodyLarge),
+                          Text("Server keys", style: Theme.of(context).textTheme.titleLarge),
 
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 10,
-                    runSpacing: 5,
-                    children: [
-                      SeedField.kyber(name: "seed"),
-                      FilledButton(
-                          onPressed: () {
-                            if (!_seedFormKey.currentState!.saveAndValidate()) {
-                              return;
-                            }
+                          const SizedBox(height: 25),
 
-                            if (_seedFormKey.currentState!.value["seed"].isEmpty){
-                              _seedFormKey
-                                  .currentState!
-                                  .fields["seed"]
-                                  ?.invalidate("Seed cannot be empty");
-                              return;
-                            }
+                          Text(
+                              "Generate keys from a seed...",
+                              style: Theme.of(context).textTheme.bodyLarge),
 
-                            var seed = hex.decode(_seedFormKey.currentState!.value["seed"]);
-                            var securityLevel = _seedFormKey.currentState!.value["securityLevel"];
-                            generateKeys(Uint8List.fromList(seed), securityLevel);
-                          },
-                          child: const Text("Generate"),
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 10,
+                            runSpacing: 5,
+                            children: [
+                              SeedField.kyber(name: "seed"),
+                              FilledButton(
+                                  onPressed: () {
+                                    if (!_seedFormKey.currentState!.saveAndValidate()) {
+                                      return;
+                                    }
+
+                                    if (_seedFormKey.currentState!.value["seed"].isEmpty){
+                                      _seedFormKey
+                                          .currentState!
+                                          .fields["seed"]
+                                          ?.invalidate("Seed cannot be empty");
+                                      return;
+                                    }
+
+                                    var seed = hex.decode(_seedFormKey.currentState!.value["seed"]);
+                                    var securityLevel = _seedFormKey.currentState!.value["securityLevel"];
+                                    generateKeys(Uint8List.fromList(seed), securityLevel);
+                                  },
+                                  child: const Text("Generate"),
+                              )
+                            ],
+                          ),
+                        ],
                       )
-                    ],
-                  ),
-                ],
-              )
-            ),
-            const SizedBox(height: 20),
+                    ),
+                    const SizedBox(height: 20),
 
-            Text(
-                "or paste them here",
-                style: Theme.of(context).textTheme.bodyLarge),
+                    Text(
+                        "or paste them here",
+                        style: Theme.of(context).textTheme.bodyLarge),
 
 
-            Wrap(
-              spacing: 70,
-              runSpacing: 30,
-              crossAxisAlignment: WrapCrossAlignment.start,
-              children: [
-                KyberKeyField.privateKey(
-                  name: "privateKey",
-                  controller: _skController,
-                  validator: validatePrivateKey,
-                  onIconPress: () {
-                    Clipboard.setData(ClipboardData(text: _skController.text));
-                  }
+                    Wrap(
+                      spacing: 70,
+                      runSpacing: 30,
+                      crossAxisAlignment: WrapCrossAlignment.start,
+                      children: [
+                        KyberKeyField.privateKey(
+                          name: "privateKey",
+                          controller: _skController,
+                          validator: validatePrivateKey,
+                          onIconPress: () {
+                            Clipboard.setData(ClipboardData(text: _skController.text));
+                          }
+                        ),
+                        KyberKeyField.publicKey(
+                          name: "publicKey",
+                          controller: _pkController,
+                          validator: validatePublicKey,
+                          onIconPress: () {
+                            Clipboard.setData(ClipboardData(text: _pkController.text));
+                          }
+                        )
+                      ]
+                    ),
+                    const SizedBox(height: 35),
+
+                    Text("Nonce", style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 14),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: NonceField(name: "nonce",)
+                    ),
+
+                    const SizedBox(height: 60),
+
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FilledButton(
+                        onPressed: () {
+                          if (!_seedFormKey.currentState!.saveAndValidate()){
+                            return;
+                          }
+
+                          if (!_formKey.currentState!.saveAndValidate()){
+                            return;
+                          }
+
+                          KyberSecurityLevel secLevel = _seedFormKey
+                              .currentState!.value["securityLevel"];
+
+                          var pkBytes = base64Decode(
+                              _formKey.currentState!.value["publicKey"]
+                          );
+                          var pk = PKEPublicKey.deserialize(pkBytes, secLevel.value);
+
+                          var skBytes = base64Decode(_formKey.currentState!.value["privateKey"]);
+                          var sk = PKEPrivateKey.deserialize(skBytes, secLevel.value);
+
+
+                          context.go(
+                            "/kyber/results",
+                            extra: KyberFlowDetails(
+                              publicKey: pk,
+                              privateKey: sk,
+                              nonce: _formKey.currentState!.value["nonce"],
+                              securityLevel: secLevel,
+                            )
+                          );
+                        },
+                          child: const Text("Start flow")
+                      ),
+                    ),
+                    const SizedBox(height: 80),
+                  ],
                 ),
-                KyberKeyField.publicKey(
-                  name: "publicKey",
-                  controller: _pkController,
-                  validator: validatePublicKey,
-                  onIconPress: () {
-                    Clipboard.setData(ClipboardData(text: _pkController.text));
-                  }
-                )
-              ]
-            ),
-            const SizedBox(height: 35),
-
-            Text("Nonce", style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: NonceField(name: "nonce",)
-            ),
-
-            const SizedBox(height: 60),
-
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton(
-                onPressed: () {
-                  if (!_seedFormKey.currentState!.saveAndValidate()){
-                    return;
-                  }
-
-                  if (!_formKey.currentState!.saveAndValidate()){
-                    return;
-                  }
-
-                  KyberSecurityLevel secLevel = _seedFormKey
-                      .currentState!.value["securityLevel"];
-
-                  var pkBytes = base64Decode(
-                      _formKey.currentState!.value["publicKey"]
-                  );
-                  var pk = PKEPublicKey.deserialize(pkBytes, secLevel.value);
-
-                  var skBytes = base64Decode(_formKey.currentState!.value["privateKey"]);
-                  var sk = PKEPrivateKey.deserialize(skBytes, secLevel.value);
-
-
-                  context.go(
-                    "/kyber/results",
-                    extra: KyberFlowDetails(
-                      publicKey: pk,
-                      privateKey: sk,
-                      nonce: _formKey.currentState!.value["nonce"],
-                      securityLevel: secLevel,
-                    )
-                  );
-                },
-                  child: const Text("Start flow")
               ),
             ),
-            const SizedBox(height: 80),
-          ]
+          ],
         ),
       ),
     );

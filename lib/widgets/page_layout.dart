@@ -17,20 +17,14 @@ class TitleSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
-            children: [
-              _buildParallaxBackground(context),
-              _buildGradient(),
-              _buildTitleAndSubtitle(),
-            ],
-          ),
-        ),
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Stack(
+        children: [
+          _buildParallaxBackground(context),
+          _buildGradient(),
+          _buildTitleAndSubtitle(context),
+        ],
       ),
     );
   }
@@ -39,12 +33,12 @@ class TitleSection extends StatelessWidget {
     return  Flow(
       delegate: ParallaxFlowDelegate(
         scrollable: Scrollable.of(context),
-        listItemContext: context,
+        titleSectionContext: context,
         backgroundImageKey: _backgroundImageKey,
       ),
       children: [
-        Image.asset(
-          backgroundImage,
+        Image.network(
+          "https://docs.flutter.dev/cookbook/img-files/effects/parallax/01-mount-rushmore.jpg",
           key: _backgroundImageKey,
           fit: BoxFit.cover,
         ),
@@ -60,14 +54,14 @@ class TitleSection extends StatelessWidget {
             colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            stops: const [0.6, 1],
+            stops: const [0.8, 0.95],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTitleAndSubtitle() {
+  Widget _buildTitleAndSubtitle(BuildContext context) {
     return Positioned(
       left: 20,
       bottom: 20,
@@ -77,11 +71,9 @@ class TitleSection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+              color: Colors.white
+            )
           ),
         ],
       ),
@@ -93,12 +85,12 @@ class TitleSection extends StatelessWidget {
 class ParallaxFlowDelegate extends FlowDelegate {
   ParallaxFlowDelegate({
     required this.scrollable,
-    required this.listItemContext,
+    required this.titleSectionContext,
     required this.backgroundImageKey,
   }) : super (repaint: scrollable.position);
 
   final ScrollableState scrollable;
-  final BuildContext listItemContext;
+  final BuildContext titleSectionContext;
   final GlobalKey backgroundImageKey;
 
   @override
@@ -112,11 +104,10 @@ class ParallaxFlowDelegate extends FlowDelegate {
   void paintChildren(FlowPaintingContext context) {
     // Calculate the position of this list item within the viewport.
     final scrollableBox = scrollable.context.findRenderObject() as RenderBox;
-    final listItemBox = listItemContext.findRenderObject() as RenderBox;
+    final listItemBox = titleSectionContext.findRenderObject() as RenderBox;
     final listItemOffset = listItemBox.localToGlobal(
         listItemBox.size.centerLeft(Offset.zero),
         ancestor: scrollableBox);
-
 
     // Determine the percent position of this list item within the
     // scrollable area.
@@ -148,7 +139,7 @@ class ParallaxFlowDelegate extends FlowDelegate {
   @override
   bool shouldRepaint(ParallaxFlowDelegate oldDelegate) {
     return scrollable != oldDelegate.scrollable ||
-        listItemContext != oldDelegate.listItemContext ||
+        titleSectionContext != oldDelegate.titleSectionContext ||
         backgroundImageKey != oldDelegate.backgroundImageKey;
   }
 
