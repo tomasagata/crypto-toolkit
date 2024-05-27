@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:crypto_toolkit/algorithms/kyber/kyber.dart';
 import 'package:crypto_toolkit/dto/kyber_flow_details.dart';
-import 'package:crypto_toolkit/widgets/security_level_field.dart';
+import 'package:crypto_toolkit/widgets/fields/security_level_field.dart';
 import 'package:flutter/material.dart';
 
 class KyberResultsPage extends StatefulWidget {

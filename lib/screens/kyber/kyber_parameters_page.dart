@@ -5,10 +5,11 @@ import 'package:crypto_toolkit/algorithms/kyber/abstractions/pke_private_key.dar
 import 'package:crypto_toolkit/algorithms/kyber/abstractions/pke_public_key.dart';
 import 'package:crypto_toolkit/algorithms/kyber/kyber.dart';
 import 'package:crypto_toolkit/dto/kyber_flow_details.dart';
-import 'package:crypto_toolkit/widgets/key_field.dart';
-import 'package:crypto_toolkit/widgets/nonce_field.dart';
-import 'package:crypto_toolkit/widgets/security_level_field.dart';
-import 'package:crypto_toolkit/widgets/seed_field.dart';
+import 'package:crypto_toolkit/widgets/fields/key_field.dart';
+import 'package:crypto_toolkit/widgets/fields/nonce_field.dart';
+import 'package:crypto_toolkit/widgets/fields/security_level_field.dart';
+import 'package:crypto_toolkit/widgets/fields/seed_field.dart';
+import 'package:crypto_toolkit/widgets/page_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -97,7 +98,9 @@ class _KyberParametersPageState extends State<KyberParametersPage> {
           cacheExtent: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 25),
           children: [
-            Text("Kyber", style: Theme.of(context).textTheme.displayLarge),
+            TitleSection(title: "Kyber", backgroundImage: "assets/images/kyber_kem_flow.jpg"),
+            //
+            // Text("Kyber", style: Theme.of(context).textTheme.displayLarge),
             const SizedBox(height: 16),
 
             Text(
