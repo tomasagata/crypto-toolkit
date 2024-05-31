@@ -62,7 +62,7 @@ class _KyberPKEEncryptionPageState extends State<KyberPKEEncryptionPage> {
       throw UnimplementedError("Security level not implemented");
     }
 
-    var (pk, _, _) = kyberInstance.generateKeys(paddedSeed);
+    var (pk, _) = kyberInstance.generateKeys(paddedSeed);
 
     setState(() {
       _pkController.text = base64Encode(pk.serialize());

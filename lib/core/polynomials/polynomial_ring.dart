@@ -1,9 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:crypto_toolkit/core/bit_packing/bit_packing_helper.dart';
+import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
 import 'package:flutter/foundation.dart';
-
-import '../ntt/ntt_helper.dart';
 
 enum Modulus { regular, centered }
 
@@ -27,11 +26,12 @@ class PolynomialRing {
       int q, {
         bool isNtt = false,
         Modulus modulusType = Modulus.regular,
-        NTTHelper? helper
+        NTTHelper? helper,
+        bool skipReduce = false
       }) {
     var normalizedCoefficients = _normalize(coefficientList, n);
 
-    if(modulusType == Modulus.regular){
+    if(modulusType == Modulus.regular && skipReduce == false){
       normalizedCoefficients = _moduloCoefs(normalizedCoefficients, q);
     }
 
@@ -196,7 +196,7 @@ class PolynomialRing {
   ///
   /// For an in-depth explanation on the algorithm, please check out
   /// https://www.geeksforgeeks.org/program-add-two-polynomials/
-  PolynomialRing plus(PolynomialRing g) {
+  PolynomialRing plus(PolynomialRing g, {bool skipReduce = false}) {
     if (g.q != q) throw ArgumentError("g cannot have a different modulus q");
     if (g.n != n) throw ArgumentError("g cannot have a different n");
     if (g.isNtt != isNtt) throw ArgumentError("Polynomials must be in either both ntt or neither to be added");
@@ -210,7 +210,11 @@ class PolynomialRing {
       resultingCoefficients[i] = temp;
     }
 
-    return PolynomialRing.from(resultingCoefficients, n, q, isNtt: isNtt, helper: helper);
+    return PolynomialRing.from(
+        resultingCoefficients, n, q,
+        isNtt: isNtt,
+        helper: helper,
+        skipReduce: skipReduce);
   }
 
   /// Multiplies this polynomial by a and returns the result as a new polynomial.
@@ -229,12 +233,13 @@ class PolynomialRing {
   ///
   /// For an in-depth explanation on the algorithm, please check out
   /// https://www.geeksforgeeks.org/multiply-two-polynomials-2/
-  PolynomialRing multiply(PolynomialRing g) {
+  PolynomialRing multiply(PolynomialRing g, {bool skipReduce = false}) {
     if (g.q != q) throw ArgumentError("g cannot have a different modulus q");
     if (g.n != n) throw ArgumentError("g cannot have a different n");
 
     if (isNtt && g.isNtt) {
-      return nttMultiply(g);
+      var res = nttMultiply(g, skipReduce: skipReduce);
+      return res;
     } else if (!isNtt && !g.isNtt) {
       return schoolbookMultiply(g);
     }
@@ -242,7 +247,7 @@ class PolynomialRing {
     throw ArgumentError("Both or neither polynomials must be in NTT form before multiplication");
   }
 
-  PolynomialRing nttMultiply(PolynomialRing g) {
+  PolynomialRing nttMultiply(PolynomialRing g, {bool skipReduce = false}) {
     if (helper == null) {
       throw StateError("Can only perform ntt reduction when parent element has an NTT Helper");
     }
@@ -251,7 +256,7 @@ class PolynomialRing {
     }
 
     List<int> newCoefs = helper!.nttCoefficientMultiplication(coefficients, g.coefficients);
-    return PolynomialRing.from(newCoefs, n, q, isNtt: true, helper: helper);
+    return PolynomialRing.from(newCoefs, n, q, isNtt: true, helper: helper, skipReduce: skipReduce);
   }
 
   PolynomialRing schoolbookMultiply(PolynomialRing g) {
@@ -395,6 +400,23 @@ class PolynomialRing {
     }
     return PolynomialRing._internal(coeffs, n, q, isNtt,
         modulusType: modulusType, helper: helper);
+  }
+
+  PolynomialRing toMontgomery() {
+    if (helper == null) {
+      throw StateError(
+          "Can only perform Montgomery reduction "
+              "when parent element has an NTT Helper");
+    }
+    return helper!.toMontgomery(this);
+  }
+
+  PolynomialRing reduceCoefficients() {
+    for (int i=0; i<coefficients.length; i++) {
+      coefficients[i] = coefficients[i] % q;
+    }
+
+    return this;
   }
 
 }

@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:crypto_toolkit/algorithms/dilithium/primitives/prf.dart';
 import 'package:crypto_toolkit/core/bit_packing/bit_packing_helper.dart';
 import 'package:crypto_toolkit/core/factories/polynomial_factory.dart';
-import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
+import 'package:crypto_toolkit/core/ntt/ntt_helper_dilithium.dart';
 import 'package:hashlib/hashlib.dart';
 
 import '../abstractions/dilithium_private_key.dart';
@@ -35,7 +35,7 @@ class DilithiumKeyGenerator {
     required this.tau,
     required this.gamma1,
   }) :
-    polyFactory = PolynomialFactory(n: n, q: q, helper: NTTHelper.dilithium());
+    polyFactory = PolynomialFactory(n: n, q: q, helper: DilithiumNTTHelper());
 
 
 

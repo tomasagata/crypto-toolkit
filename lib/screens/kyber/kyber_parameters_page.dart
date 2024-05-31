@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:convert/convert.dart';
+import 'package:crypto_toolkit/algorithms/kyber/abstractions/kem_private_key.dart';
+import 'package:crypto_toolkit/algorithms/kyber/abstractions/kem_public_key.dart';
 import 'package:crypto_toolkit/algorithms/kyber/abstractions/pke_private_key.dart';
 import 'package:crypto_toolkit/algorithms/kyber/abstractions/pke_public_key.dart';
 import 'package:crypto_toolkit/algorithms/kyber/kyber.dart';
@@ -77,7 +79,7 @@ class _KyberParametersPageState extends State<KyberParametersPage> {
       throw UnimplementedError("Security level not implemented");
     }
 
-    var (pk, sk, _) = kyberInstance.generateKeys(paddedSeed);
+    var (pk, sk) = kyberInstance.generateKeys(paddedSeed);
 
     setState(() {
       _pkController.text = base64Encode(pk.serialize());
@@ -239,10 +241,10 @@ class _KyberParametersPageState extends State<KyberParametersPage> {
                           var pkBytes = base64Decode(
                               _formKey.currentState!.value["publicKey"]
                           );
-                          var pk = PKEPublicKey.deserialize(pkBytes, secLevel.value);
+                          var pk = KemPublicKey.deserialize(pkBytes, secLevel.value);
 
                           var skBytes = base64Decode(_formKey.currentState!.value["privateKey"]);
-                          var sk = PKEPrivateKey.deserialize(skBytes, secLevel.value);
+                          var sk = KemPrivateKey.deserialize(skBytes, secLevel.value);
 
 
                           context.go(

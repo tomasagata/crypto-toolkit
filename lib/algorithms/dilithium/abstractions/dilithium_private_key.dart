@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
+import 'package:crypto_toolkit/core/ntt/ntt_helper_dilithium.dart';
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring.dart';
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring_matrix.dart';
 
@@ -80,7 +80,7 @@ class DilithiumPrivateKey {
     PolynomialMatrix s;
 
     s = PolynomialMatrix.deserialize(
-        bytes, rows, 1, wordSize, 256, 8380417, helper: NTTHelper.dilithium()
+        bytes, rows, 1, wordSize, 256, 8380417, helper: DilithiumNTTHelper()
     );
 
     s.mapCoefficients((coef) => eta - coef, inPlace: true);
@@ -90,7 +90,7 @@ class DilithiumPrivateKey {
 
   static PolynomialMatrix _deserializeT0(Uint8List bytes, int l) {
     var t0 = PolynomialMatrix.deserialize(
-        bytes, l, 1, 13, 256, 8380417, modulusType: Modulus.centered, helper: NTTHelper.dilithium()
+        bytes, l, 1, 13, 256, 8380417, modulusType: Modulus.centered, helper: DilithiumNTTHelper()
     );
 
     t0.mapCoefficients((coef) => (1 << 12) - coef, inPlace: true);

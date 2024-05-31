@@ -27,10 +27,8 @@ class KyberResultsPage extends StatefulWidget {
       flowDetails.nonce
     );
     var serverSharedKey = kyberInstance.decapsulate(
-        flowDetails.publicKey,
-        flowDetails.privateKey,
         pkeCipher,
-        flowDetails.nonce
+        flowDetails.privateKey
     );
 
     return (

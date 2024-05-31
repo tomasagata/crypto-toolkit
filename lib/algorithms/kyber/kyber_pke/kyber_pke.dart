@@ -30,7 +30,7 @@ class KyberPKE {
     required int du,
     required int dv,
   }) {
-    var keyGenerator = KeyGenerator(n, k, q, eta1, eta2);
+    var keyGenerator = KeyGenerator(n: n, k: k, q: q, eta1: eta1, eta2: eta2);
     return KyberPKE._internal(n: n, k: k, q: q, du: du, dv: dv, keyGenerator: keyGenerator);
   }
 
@@ -94,18 +94,21 @@ class KyberPKE {
       throw ArgumentError("Message must be 32 bytes in length");
     }
 
-    PolynomialMatrix t = pk.t;
+    PolynomialMatrix t = pk.t.copy();
     PolynomialMatrix A = keyGenerator.regenerateA(pk.rho);
     var (r, e1, e2) = keyGenerator.generateNoiseVectors(seed);
+    r.toNtt();
 
     var msgPolynomial = PolynomialRing.deserialize(msg, 1, n, q).decompress(1);
 
     PolynomialMatrix u = A.transpose()
         .multiply(r)
+        .fromNtt()
         .plus(e1);
 
     PolynomialRing v = t.transpose() // 1xn
         .multiply(r) // nx1
+        .fromNtt()
         .toRing() // 1x1 -> Unwraps into single PolynomialRing
         .plus(e2)
         .plus(msgPolynomial);
@@ -115,7 +118,17 @@ class KyberPKE {
 
 
   Uint8List decrypt(PKEPrivateKey sk, PKECypher cypher) {
-    var msgPolynomial = cypher.v.minus(sk.s.transpose().multiply(cypher.u).toRing());
+    var sTransposed = sk.s.copy().transpose();
+    var uHat = cypher.u.copy().toNtt();
+    var v = cypher.v.copy();
+
+    var msgPolynomial = sTransposed
+                            .multiply(uHat)
+                            .fromNtt()
+                            .toRing();
+
+    msgPolynomial = v.minus(msgPolynomial);
+
     return msgPolynomial.compress(1).serialize(1);
   }
 

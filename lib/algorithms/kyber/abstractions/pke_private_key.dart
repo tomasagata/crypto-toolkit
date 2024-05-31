@@ -11,7 +11,7 @@ class PKEPrivateKey {
   }
 
   factory PKEPrivateKey.deserialize(Uint8List byteArray, int kyberVersion) {
-    var s = PolynomialMatrix.deserialize(byteArray, kyberVersion, 1, 12, 256, 3329);
+    var s = PolynomialMatrix.deserialize(byteArray, kyberVersion, 1, 12, 256, 3329, isNtt: true);
     return PKEPrivateKey._internal(s);
   }
 

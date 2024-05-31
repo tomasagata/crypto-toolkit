@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
+import 'package:crypto_toolkit/core/ntt/ntt_helper_dilithium.dart';
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring.dart';
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring_matrix.dart';
 
@@ -68,7 +68,7 @@ class DilithiumSignature {
     PolynomialMatrix z;
 
     z = PolynomialMatrix.deserialize(
-        bytes, l, 1, wordSize, 256, 8380417, helper: NTTHelper.dilithium()
+        bytes, l, 1, wordSize, 256, 8380417, helper: DilithiumNTTHelper()
     );
 
     z.mapCoefficients((coef) => gamma1 - coef, inPlace: true);

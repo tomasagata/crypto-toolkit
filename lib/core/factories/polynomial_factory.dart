@@ -1,4 +1,6 @@
 import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
+import 'package:crypto_toolkit/core/ntt/ntt_helper_dilithium.dart';
+import 'package:crypto_toolkit/core/ntt/ntt_helper_kyber.dart';
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring.dart';
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring_matrix.dart';
 
@@ -18,7 +20,7 @@ class PolynomialFactory {
     return PolynomialFactory(
         n: 256,
         q: 3329,
-        helper: NTTHelper.kyber()
+        helper: KyberNTTHelper()
     );
   }
 
@@ -26,14 +28,22 @@ class PolynomialFactory {
     return PolynomialFactory(
       n: 256,
       q: 8380417,
-      helper: NTTHelper.dilithium()
+      helper: DilithiumNTTHelper()
     );
   }
 
 
 
-  PolynomialRing ring(List<int> coefficients, {bool isNtt = false}) {
-    return PolynomialRing.from(coefficients, n, q, helper: helper, isNtt: isNtt);
+  PolynomialRing ring(
+      List<int> coefficients, {
+        bool isNtt = false,
+        Modulus modulusType = Modulus.regular
+  }) {
+    return PolynomialRing.from(
+        coefficients, n, q,
+        helper: helper,
+        modulusType: modulusType,
+        isNtt: isNtt);
   }
 
   PolynomialMatrix vector(List<PolynomialRing> polynomials) {

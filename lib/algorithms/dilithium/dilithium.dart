@@ -5,7 +5,7 @@ import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_publi
 import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_signature.dart';
 import 'package:crypto_toolkit/algorithms/dilithium/generators/dilithium_key_generator.dart';
 import 'package:crypto_toolkit/core/factories/polynomial_factory.dart';
-import 'package:crypto_toolkit/core/ntt/ntt_helper.dart';
+import 'package:crypto_toolkit/core/ntt/ntt_helper_dilithium.dart';
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring.dart';
 import 'package:crypto_toolkit/core/polynomials/polynomial_ring_matrix.dart';
 import 'package:hashlib/hashlib.dart';
@@ -35,7 +35,7 @@ class Dilithium {
     required this.gamma2
   }) :
     beta = tau * eta,
-    polyFactory = PolynomialFactory(n: n, q: q, helper: NTTHelper.dilithium()),
+    polyFactory = PolynomialFactory(n: n, q: q, helper: DilithiumNTTHelper()),
     keyGenerator = DilithiumKeyGenerator(
       n: n,
       q: q,

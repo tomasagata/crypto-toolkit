@@ -13,7 +13,8 @@ class PKEPublicKey {
   factory PKEPublicKey.deserialize(Uint8List byteArray, int kyberVersion) {
     var rho = byteArray.sublist(byteArray.length - 32);
     var serializedT = byteArray.sublist(0, byteArray.length - 32);
-    var t = PolynomialMatrix.deserialize(serializedT, kyberVersion, 1, 12, 256, 3329);
+    var t = PolynomialMatrix.deserialize(
+        serializedT, kyberVersion, 1, 12, 256, 3329, isNtt: true);
     return PKEPublicKey._internal(t, rho);
   }
 

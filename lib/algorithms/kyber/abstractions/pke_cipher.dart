@@ -78,4 +78,31 @@ class PKECypher {
     return serializedCypher.toBytes();
   }
 
+  /// Compares two ciphers.
+  ///
+  /// WARNING: This is NOT cryptographically safe.
+  /// In order to comply with the specification, a constant time
+  /// implementation is required. This is not it. Please if you know
+  /// how to implement it and would like to help out, push a commit to
+  /// the repository.
+  @override
+  bool operator== (covariant PKECypher other) {
+    Uint8List thisCipher = serialize();
+    Uint8List otherCipher = other.serialize();
+
+    if ( thisCipher.length != otherCipher.length ) {
+      // A constant time implementation should not return early.
+      // It should always run in the same amount of time.
+      return false;
+    }
+
+    for (int i=0; i<thisCipher.length; i++) {
+      if (thisCipher[i] != otherCipher[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
 }

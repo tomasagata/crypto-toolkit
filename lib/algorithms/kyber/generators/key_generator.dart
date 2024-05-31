@@ -1,5 +1,9 @@
 import 'dart:typed_data';
 
+import 'package:crypto_toolkit/core/factories/polynomial_factory.dart';
+import 'package:crypto_toolkit/core/ntt/ntt_helper_kyber.dart';
+import 'package:crypto_toolkit/core/primitives/prf.dart';
+import 'package:crypto_toolkit/core/primitives/xof.dart';
 import 'package:hashlib/hashlib.dart';
 
 import '../abstractions/pke_private_key.dart';
@@ -17,7 +21,14 @@ class KeyGenerator {
   /// [eta1] is the size of "small" coefficients used in the private key.
   /// [eta2] is the size of "small" coefficients used in the noise vectors.
   /// [k] is the size of the public and private keys.
-  KeyGenerator(this.n, this.k, this.q, this.eta1, this.eta2);
+  KeyGenerator({
+    required this.n,
+    required this.k,
+    required this.q,
+    required this.eta1,
+    required this.eta2
+  }) :
+    polyFactory = PolynomialFactory(n: n, q: q, helper: KyberNTTHelper());
 
 
 
@@ -29,6 +40,7 @@ class KeyGenerator {
   int q;
   int eta1;
   int eta2;
+  PolynomialFactory polyFactory;
 
 
 
@@ -37,12 +49,12 @@ class KeyGenerator {
   // ------------ KYBER PRIMITIVES ------------
 
   /// Sample Documentation
-  Uint8List _xof(Uint8List seed, int j, int i) {
+  XOF _xof(Uint8List seed, int j, int i) {
     BytesBuilder message = BytesBuilder();
     message.add(seed);
     message.addByte(j);
     message.addByte(i);
-    return shake128.of(1344).convert(message.toBytes()).bytes;
+    return XOF(message.toBytes());
   }
 
 
@@ -56,16 +68,16 @@ class KeyGenerator {
   }
 
 
-  /// Hashes the XOR(seed, nonce) in SHAKE256 and returns
-  /// 2000 bytes of digest.
+  /// Appends the seed and nonce values and returns
+  /// its SHAKE256 hash.
   ///
   /// PRF takes in a 256-bit (32-byte) [seed] and a
-  /// [nonce] and returns a 2000-byte SHAKE256 hash.
-  Uint8List _prf(Uint8List seed, int nonce) {
+  /// [nonce] and returns an extensible SHAKE256 hash.
+  PRF _prf(Uint8List seed, int nonce) {
     BytesBuilder message = BytesBuilder();
     message.add(seed);
     message.addByte(nonce);
-    return shake256.of(2000).convert(message.toBytes()).bytes;
+    return PRF(message.toBytes());
   }
 
 
@@ -84,7 +96,7 @@ class KeyGenerator {
   /// array of bytes "[a]" and returns a Polynomial with
   /// [n] coefficients.
   PolynomialRing _cbd(Uint8List a, int eta) {
-    assert( a.length == ((2*eta*n/8).round()));
+    assert( a.length == (2*eta*n/8).round() );
 
     // Returns a list of 2*n*eta bits
     List<int> bitArray = _getBitArrayFromByteArray(a);
@@ -100,56 +112,60 @@ class KeyGenerator {
 
     List<int> coefficients = [];
     for (var i=0; i<2*n; i=i+2) {
-      coefficients.add( (groupResults[i] - groupResults[i+1]) % 3329);
+      coefficients.add( groupResults[i] - groupResults[i+1] );
     }
     assert( coefficients.length == n );
 
-    return PolynomialRing.from(coefficients, n, q);
+    return polyFactory.ring( coefficients, modulusType: Modulus.centered );
   }
 
   // Polynomial sampling
-  PolynomialRing _sampleUniform(Uint8List stream) {
+  PolynomialRing _sampleUniform(XOF stream, {bool isNtt = false}) {
     List<int> coefficients = [];
-    for (var offset = 0; offset < stream.length; offset+=3) {
-      var bytes = stream.sublist(offset, offset + 3);
+
+    while(true) {
+      var bytes = stream.read(3);
       int num1 = bytes[0] + (256 * (bytes[1] % 16));
       int num2 = (bytes[1] >> 4) + (16 * bytes[2]);
 
       for (var num in [num1, num2]) {
         if (num >= q) continue;
         coefficients.add(num);
-        if (coefficients.length == n) return PolynomialRing.from(coefficients, n, q);
+        if (coefficients.length == n) {
+          return polyFactory.ring(coefficients, isNtt: isNtt);
+        }
       }
     }
-    throw StateError("Exhausted all bytes. Please try again.");
   }
 
-  // TODO: FIND OUT WHAT ".read(64*eta)" DOES
-  PolynomialMatrix _sampleNoise(Uint8List sigma, int eta, int offset, int k) {
-    List<PolynomialRing> flattenedCoefficients = [];
+
+  PolynomialMatrix _sampleNoise(
+      Uint8List sigma,
+      int eta,
+      int offset,
+      int k
+  ) {
+    List<PolynomialRing> flattenedPolynomials = [];
     for (var i=0; i<k; i++) {
-      flattenedCoefficients.add(
-          _cbd(
-            // Truncate hash result to 2*eta*n/8 = 64*eta bytes when n=256.
-              _prf(sigma, i + offset).sublist(0, (2*eta*n/8).round() ),
-              eta
-          )
-      );
+      var inputBytes = _prf(sigma, i + offset).read(64*eta);
+      var poly = _cbd(inputBytes, eta);
+
+      flattenedPolynomials.add(poly);
     }
-    return PolynomialMatrix.vector(flattenedCoefficients);
+    return polyFactory.vector(flattenedPolynomials);
   }
 
   /// Generates a k*k matrix of samples
-  PolynomialMatrix _sampleMatrix(Uint8List rho) {
+  PolynomialMatrix _sampleMatrix(Uint8List rho, {bool isNtt = false}) {
     List<PolynomialRing> polynomials = [];
     for (var i=0; i<k; i++) {
       for (var j=0; j<k; j++) {
         polynomials.add(
-            _sampleUniform( _xof(rho, j, i) )
+            _sampleUniform( _xof(rho, j, i), isNtt: isNtt )
         );
       }
     }
-    return PolynomialMatrix.fromList(polynomials, k, k);
+    return polyFactory.matrix(polynomials, k, k);
   }
 
 
@@ -196,8 +212,8 @@ class KeyGenerator {
 
   // ------------ INTERNAL API ------------
 
-  PolynomialMatrix _generateMatrixA(Uint8List rho) {
-    return _sampleMatrix(rho);
+  PolynomialMatrix _generateMatrixA(Uint8List rho, {bool isNtt = false}) {
+    return _sampleMatrix(rho, isNtt: isNtt);
   }
 
   PolynomialMatrix _generateVectorS(Uint8List sigma) {
@@ -220,11 +236,23 @@ class KeyGenerator {
   (PKEPublicKey pk, PKEPrivateKey sk) generateKeys(Uint8List seed) {
     var (rho, sigma) = _g(seed);
 
-    var A = _generateMatrixA(rho);
+    var A = _generateMatrixA(rho, isNtt: true);
+
     var s = _generateVectorS(sigma);
+    s.toNtt();
+
     var e = _generateVectorE(sigma);
-    var tHat = A.multiply(s);
-    var t = tHat.plus(e);
+    e.toNtt();
+
+
+    var t = A.multiply(s, skipReduce: true);
+
+
+    t = t.toMontgomery();
+    t = t.plus(e, skipReduce: true);
+
+    t.reduceCoefficients();
+    s.reduceCoefficients();
 
     return (PKEPublicKey(t, rho), PKEPrivateKey(s));
   }
@@ -247,7 +275,7 @@ class KeyGenerator {
     if(rho.length != 32) {
       throw ArgumentError("RHO must be 32 bytes in size");
     }
-    return _generateMatrixA(rho);
+    return _generateMatrixA(rho, isNtt: true);
   }
 
 }

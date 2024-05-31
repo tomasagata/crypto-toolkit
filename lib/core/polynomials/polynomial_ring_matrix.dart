@@ -109,14 +109,15 @@ class PolynomialMatrix {
 
   // --------- PUBLIC METHODS ---------
 
-  PolynomialMatrix plus(PolynomialMatrix other) {
+  PolynomialMatrix plus(PolynomialMatrix other, {bool skipReduce = true}) {
     if (rows != other.rows || columns != other.columns) {
       throw ArgumentError("Matrices must have the same dimensions for addition.");
     }
 
     List<List<PolynomialRing>> result = List.generate(rows, (i) {
       return List.generate(columns, (j) {
-        return elementMatrix[i][j].plus(other.elementMatrix[i][j]);
+        return elementMatrix[i][j].plus(
+            other.elementMatrix[i][j], skipReduce: skipReduce);
       });
     });
 
@@ -137,7 +138,7 @@ class PolynomialMatrix {
     return PolynomialMatrix.fromSquareMatrix(result);
   }
 
-  PolynomialMatrix multiply(PolynomialMatrix other) {
+  PolynomialMatrix multiply(PolynomialMatrix other, {bool skipReduce = false}) {
     if (columns != other.rows) {
       throw ArgumentError(
           "Number of columns in the first matrix must be equal to the number of rows in the second matrix for multiplication.");
@@ -147,10 +148,11 @@ class PolynomialMatrix {
     for (var i = 0; i < rows; i++) {
       for (var j = 0; j < other.columns; j++) {
         PolynomialRing sum = elementMatrix[i][0].multiply(
-            other.elementMatrix[0][j]);
+            other.elementMatrix[0][j], skipReduce: skipReduce);
         for (var k = 1; k < columns; k++) {
-          var mult = elementMatrix[i][k].multiply(other.elementMatrix[k][j]);
-          sum = sum.plus(mult);
+          var mult = elementMatrix[i][k].multiply(
+              other.elementMatrix[k][j], skipReduce: skipReduce);
+          sum = sum.plus(mult, skipReduce: skipReduce);
         }
         polynomials.add(sum);
       }
@@ -346,6 +348,28 @@ class PolynomialMatrix {
         (poly) => poly.map(toElement, inPlace: true),
         inPlace: inPlace
     );
+  }
+
+  PolynomialMatrix toMontgomery() {
+    List<PolynomialRing> polynomials = [];
+    for(int i=0; i < rows; i++) {
+      for(int j=0; j < columns; j++) {
+        polynomials.add(
+            elementMatrix[i][j].toMontgomery()
+        );
+      }
+    }
+    return PolynomialMatrix.fromList(polynomials, rows, columns);
+  }
+
+  PolynomialMatrix reduceCoefficients() {
+    for (int i=0; i < rows; i++) {
+      for (int j=0; j < columns; j++) {
+        elementMatrix[i][j].reduceCoefficients();
+      }
+    }
+
+    return this;
   }
 
 }
