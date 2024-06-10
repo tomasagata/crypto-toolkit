@@ -1,9 +1,7 @@
 import 'dart:convert';
 
 import 'package:convert/convert.dart';
-import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_public_key.dart';
-import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_signature.dart';
-import 'package:crypto_toolkit/algorithms/dilithium/dilithium.dart';
+import 'package:post_quantum/post_quantum.dart';
 import 'package:crypto_toolkit/widgets/fields/key_field.dart';
 import 'package:crypto_toolkit/widgets/fields/message_field.dart';
 import 'package:crypto_toolkit/widgets/fields/security_level_field.dart';
@@ -90,7 +88,7 @@ class _DilithiumVerifyPageState extends State<DilithiumVerifyPage> {
       child: FormBuilder(
         key: _formKey,
         child: ListView(
-          cacheExtent:  double.infinity,
+          cacheExtent:  double.maxFinite,
           padding: const EdgeInsets.fromLTRB(40, 25, 40, 25),
           children: [
             Text("Dilithium Verify", style: Theme

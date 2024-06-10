@@ -1,11 +1,7 @@
 import 'dart:convert';
 
 import 'package:convert/convert.dart';
-import 'package:crypto_toolkit/algorithms/kyber/abstractions/kem_private_key.dart';
-import 'package:crypto_toolkit/algorithms/kyber/abstractions/kem_public_key.dart';
-import 'package:crypto_toolkit/algorithms/kyber/abstractions/pke_private_key.dart';
-import 'package:crypto_toolkit/algorithms/kyber/abstractions/pke_public_key.dart';
-import 'package:crypto_toolkit/algorithms/kyber/kyber.dart';
+import 'package:post_quantum/post_quantum.dart';
 import 'package:crypto_toolkit/dto/kyber_flow_details.dart';
 import 'package:crypto_toolkit/widgets/fields/key_field.dart';
 import 'package:crypto_toolkit/widgets/fields/nonce_field.dart';
@@ -38,7 +34,7 @@ class _KyberParametersPageState extends State<KyberParametersPage> {
     KyberSecurityLevel securityLevel = _seedFormKey.currentState!.value["securityLevel"];
     String? errorMsg;
     try {
-      PKEPrivateKey.deserialize(
+      KemPrivateKey.deserialize(
           base64Decode(sk!),
           securityLevel.value
       );
@@ -52,7 +48,7 @@ class _KyberParametersPageState extends State<KyberParametersPage> {
     KyberSecurityLevel securityLevel = _seedFormKey.currentState!.value["securityLevel"];
     String? errorMsg;
     try {
-      PKEPublicKey.deserialize(
+      KemPublicKey.deserialize(
           base64Decode(pk!),
           securityLevel.value
       );

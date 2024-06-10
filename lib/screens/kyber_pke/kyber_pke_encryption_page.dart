@@ -1,9 +1,8 @@
 import 'dart:convert';
 
 import 'package:convert/convert.dart';
-import 'package:crypto_toolkit/algorithms/kyber/abstractions/pke_public_key.dart';
-import 'package:crypto_toolkit/algorithms/kyber/kyber.dart';
-import 'package:crypto_toolkit/algorithms/kyber/kyber_pke/kyber_pke.dart';
+import 'package:go_router/go_router.dart';
+import 'package:post_quantum/post_quantum.dart';
 import 'package:crypto_toolkit/widgets/fields/key_field.dart';
 import 'package:crypto_toolkit/widgets/fields/message_field.dart';
 import 'package:crypto_toolkit/widgets/fields/nonce_field.dart';
@@ -26,6 +25,7 @@ class _KyberPKEEncryptionPageState extends State<KyberPKEEncryptionPage> {
   final _encryptedMsgController = TextEditingController();
   final _formKey = GlobalKey<FormBuilderState>();
   final _seedFormKey = GlobalKey<FormBuilderState>();
+  StepObserver? observer;
 
   final Map<String, dynamic> initValues = {
     "securityLevel": KyberSecurityLevel.level2
@@ -46,18 +46,18 @@ class _KyberPKEEncryptionPageState extends State<KyberPKEEncryptionPage> {
   }
 
   void generateKeys(Uint8List seed, KyberSecurityLevel securityLevel) {
-    var paddedSeed = Uint8List(64);
+    var paddedSeed = Uint8List(32);
     for (int i=0; i<seed.length; i++) {
       paddedSeed[i] = seed[i];
     }
 
-    Kyber kyberInstance;
+    KyberPKE kyberInstance;
     if(securityLevel == KyberSecurityLevel.level2) {
-      kyberInstance = Kyber.kem512();
+      kyberInstance = KyberPKE.pke512();
     } else if (securityLevel == KyberSecurityLevel.level3) {
-      kyberInstance = Kyber.kem768();
+      kyberInstance = KyberPKE.pke768();
     } else if (securityLevel == KyberSecurityLevel.level4) {
-      kyberInstance = Kyber.kem1024();
+      kyberInstance = KyberPKE.pke1024();
     } else {
       throw UnimplementedError("Security level not implemented");
     }
@@ -78,7 +78,7 @@ class _KyberPKEEncryptionPageState extends State<KyberPKEEncryptionPage> {
         key: _formKey,
         initialValue: initValues,
         child: ListView(
-            cacheExtent: double.infinity,
+            cacheExtent: double.maxFinite,
             padding: const EdgeInsets.fromLTRB(40, 25, 40, 25),
             children: [
               Text("Kyber Encryption", style: Theme
@@ -209,9 +209,10 @@ class _KyberPKEEncryptionPageState extends State<KyberPKEEncryptionPage> {
 
               const SizedBox(height: 60),
 
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  FilledButton(
                     onPressed: () {
                       if (!_seedFormKey.currentState!.saveAndValidate()){
                         return;
@@ -241,17 +242,29 @@ class _KyberPKEEncryptionPageState extends State<KyberPKEEncryptionPage> {
                       } else if (securityLevel == KyberSecurityLevel.level4) {
                         kyberInstance = KyberPKE.pke1024();
                       } else {
+                        observer = null;
                         throw UnimplementedError("Security level not implemented");
                       }
 
-                      var cipher = kyberInstance.encrypt(pk, msg, nonce);
+                      observer = StepObserver();
+                      var cipher = kyberInstance.encrypt(
+                          pk, msg, nonce, observer: observer!);
 
                       setState(() {
                         _encryptedMsgController.text = cipher.base64;
                       });
                     },
                     child: const Text("Encrypt")
-                ),
+                  ),
+                  FilledButton(
+                      onPressed: () {
+                        if (observer == null) return;
+                        context.go("/kyber-pke/encrypt/steps",
+                          extra: observer?.steps);
+                      },
+                      child: const Text("View steps")
+                  )
+                ]
               ),
               const SizedBox(height: 80),
 

@@ -1,9 +1,7 @@
 import 'dart:convert';
 
 import 'package:convert/convert.dart';
-import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_private_key.dart';
-import 'package:crypto_toolkit/algorithms/dilithium/abstractions/dilithium_public_key.dart';
-import 'package:crypto_toolkit/algorithms/dilithium/dilithium.dart';
+import 'package:post_quantum/post_quantum.dart';
 import 'package:crypto_toolkit/widgets/fields/key_field.dart';
 import 'package:crypto_toolkit/widgets/fields/message_field.dart';
 import 'package:crypto_toolkit/widgets/fields/security_level_field.dart';

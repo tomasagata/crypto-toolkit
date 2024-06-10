@@ -39,6 +39,7 @@ dependencies:
   go_router: ^14.1.2
   flutter_form_builder: ^9.2.1
   convert: ^3.1.1
+  post_quantum: ^1.0.0-prerelease.1
 
 dev_dependencies:
   flutter_test:

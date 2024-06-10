@@ -1,10 +1,7 @@
 import 'dart:convert';
 
 import 'package:convert/convert.dart';
-import 'package:crypto_toolkit/algorithms/kyber/abstractions/pke_cipher.dart';
-import 'package:crypto_toolkit/algorithms/kyber/abstractions/pke_private_key.dart';
-import 'package:crypto_toolkit/algorithms/kyber/kyber.dart';
-import 'package:crypto_toolkit/algorithms/kyber/kyber_pke/kyber_pke.dart';
+import 'package:post_quantum/post_quantum.dart';
 import 'package:crypto_toolkit/widgets/fields/cipher_field.dart';
 import 'package:crypto_toolkit/widgets/fields/key_field.dart';
 import 'package:crypto_toolkit/widgets/fields/security_level_field.dart';
@@ -46,18 +43,18 @@ class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
   }
 
   void generateKeys(Uint8List seed, KyberSecurityLevel securityLevel) {
-    var paddedSeed = Uint8List(64);
+    var paddedSeed = Uint8List(32);
     for (int i=0; i<seed.length; i++) {
       paddedSeed[i] = seed[i];
     }
 
-    Kyber kyberInstance;
+    KyberPKE kyberInstance;
     if(securityLevel == KyberSecurityLevel.level2) {
-      kyberInstance = Kyber.kem512();
+      kyberInstance = KyberPKE.pke512();
     } else if (securityLevel == KyberSecurityLevel.level3) {
-      kyberInstance = Kyber.kem768();
+      kyberInstance = KyberPKE.pke768();
     } else if (securityLevel == KyberSecurityLevel.level4) {
-      kyberInstance = Kyber.kem1024();
+      kyberInstance = KyberPKE.pke1024();
     } else {
       throw UnimplementedError("Security level not implemented");
     }
@@ -76,7 +73,7 @@ class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
       child: FormBuilder(
         key: _formKey,
         child: ListView(
-            cacheExtent: double.infinity,
+            cacheExtent: double.maxFinite,
             padding: const EdgeInsets.fromLTRB(40, 25, 40, 25),
             children: [
               Text("Kyber Decryption", style: Theme

@@ -1,8 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:crypto_toolkit/algorithms/kyber/abstractions/kem_private_key.dart';
-import 'package:crypto_toolkit/algorithms/kyber/abstractions/kem_public_key.dart';
 import 'package:crypto_toolkit/widgets/fields/security_level_field.dart';
+import 'package:post_quantum/post_quantum.dart';
 
 class KyberFlowDetails {
   const KyberFlowDetails({
