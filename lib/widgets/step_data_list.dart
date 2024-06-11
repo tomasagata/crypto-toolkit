@@ -39,21 +39,14 @@ class StepDataList extends StatelessWidget {
                     .elementAt(index);
                 bool isSelected = selected?.key == element.key;
 
-                return GestureDetector(
+                return StepDataListItem(
                   onTap: () => onSelect(element),
-                  child: Container(
-                    height: 70,
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.all(
-                          Radius.circular(6)),
-                      color: isSelected? Colors.lightGreenAccent: Colors.white
-                    ),
-                    child: Column(
-                      children: [
-                        Text(label),
-                        Text(element.key),
-                      ],
-                    )
+                  isSelected: isSelected,
+                  child: Column(
+                    children: [
+                      Text(label),
+                      Text(element.key),
+                    ],
                   )
                 );
               }
@@ -64,4 +57,37 @@ class StepDataList extends StatelessWidget {
     );
   }
   
+}
+
+class StepDataListItem extends StatelessWidget {
+  final bool isSelected;
+  final Widget? child;
+  final void Function()? onTap;
+
+  const StepDataListItem({
+    super.key,
+    required this.isSelected,
+    this.child,
+    this.onTap
+  });
+
+  @override
+  Widget build(BuildContext context) {
+
+    return InkWell(
+      borderRadius: const BorderRadius.all(
+            Radius.circular(6)),
+      onTap: onTap,
+      child: Ink(
+        height: 70,
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(
+              Radius.circular(6)),
+          color: isSelected? Colors.lightGreenAccent: Colors.white
+        ),
+        child: child
+      )
+    );
+  }
+
 }

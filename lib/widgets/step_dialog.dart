@@ -29,9 +29,11 @@ class _StepDialogState extends State<StepDialog> {
   Widget build(BuildContext context) {
 
     return Dialog(
-      backgroundColor: const Color(0xFFF5F5F5),
+      // shape: RoundedRectangleBorder(
+      //     borderRadius: BorderRadius.circular(5)),
+      backgroundColor: const Color(0xFFEDEDED),
       child: Padding(
-        padding: const EdgeInsets.only(top: 5),
+        padding: const EdgeInsets.all(10),
         child: Column(
           children: [
             Row(
