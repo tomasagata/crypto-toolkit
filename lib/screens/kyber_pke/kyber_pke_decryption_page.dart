@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:convert/convert.dart';
+import 'package:go_router/go_router.dart';
 import 'package:post_quantum/post_quantum.dart';
 import 'package:crypto_toolkit/widgets/fields/cipher_field.dart';
 import 'package:crypto_toolkit/widgets/fields/key_field.dart';
@@ -23,6 +24,7 @@ class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
   final _encryptedMsgController = TextEditingController();
   final _formKey = GlobalKey<FormBuilderState>();
   final _seedFormKey = GlobalKey<FormBuilderState>();
+  StepObserver? observer;
 
   final Map<String, dynamic> initValues = {
     "securityLevel": KyberSecurityLevel.level2
@@ -198,60 +200,71 @@ class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
 
               const SizedBox(height: 60),
 
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton(
-                    onPressed: () {
-                      if (!_seedFormKey.currentState!.saveAndValidate()){
-                        return;
-                      }
+              Row(
+                children: [
+                  FilledButton(
+                      onPressed: () {
+                        if (!_seedFormKey.currentState!.saveAndValidate()){
+                          return;
+                        }
 
-                      if (!_formKey.currentState!.saveAndValidate()){
-                        return;
-                      }
+                        if (!_formKey.currentState!.saveAndValidate()){
+                          return;
+                        }
 
-                      KyberSecurityLevel securityLevel = _seedFormKey
-                          .currentState!.value["securityLevel"];
+                        KyberSecurityLevel securityLevel = _seedFormKey
+                            .currentState!.value["securityLevel"];
 
-                      var skBytes = base64Decode(
-                          _formKey.currentState!.value["privateKey"]
-                      );
-                      var sk = PKEPrivateKey.deserialize(skBytes, securityLevel.value);
-
-                      PKECypher encryptedMsg;
-                      try {
-                        var encryptedMsgBytes = base64Decode(
-                            _formKey.currentState!.value["encryptedMsg"]
+                        var skBytes = base64Decode(
+                            _formKey.currentState!.value["privateKey"]
                         );
-                        encryptedMsg = PKECypher.deserialize(encryptedMsgBytes, securityLevel.value);
-                      } catch (err) {
-                        print(err);
-                        _formKey
-                            .currentState!
-                            .fields["encryptedMsg"]
-                            ?.invalidate("Please enter a valid encrypted message.");
-                        return;
-                      }
+                        var sk = PKEPrivateKey.deserialize(skBytes, securityLevel.value);
 
-                      KyberPKE kyberInstance;
-                      if(securityLevel == KyberSecurityLevel.level2) {
-                        kyberInstance = KyberPKE.pke512();
-                      } else if (securityLevel == KyberSecurityLevel.level3) {
-                        kyberInstance = KyberPKE.pke768();
-                      } else if (securityLevel == KyberSecurityLevel.level4) {
-                        kyberInstance = KyberPKE.pke1024();
-                      } else {
-                        throw UnimplementedError("Security level not implemented");
-                      }
+                        PKECypher encryptedMsg;
+                        try {
+                          var encryptedMsgBytes = base64Decode(
+                              _formKey.currentState!.value["encryptedMsg"]
+                          );
+                          encryptedMsg = PKECypher.deserialize(encryptedMsgBytes, securityLevel.value);
+                        } catch (err) {
+                          print(err);
+                          _formKey
+                              .currentState!
+                              .fields["encryptedMsg"]
+                              ?.invalidate("Please enter a valid encrypted message.");
+                          return;
+                        }
 
-                      var originalMsg = kyberInstance.decrypt(sk, encryptedMsg);
+                        KyberPKE kyberInstance;
+                        if(securityLevel == KyberSecurityLevel.level2) {
+                          kyberInstance = KyberPKE.pke512();
+                        } else if (securityLevel == KyberSecurityLevel.level3) {
+                          kyberInstance = KyberPKE.pke768();
+                        } else if (securityLevel == KyberSecurityLevel.level4) {
+                          kyberInstance = KyberPKE.pke1024();
+                        } else {
+                          throw UnimplementedError("Security level not implemented");
+                        }
 
-                      setState(() {
-                        _msgController.text = hex.encode(originalMsg);
-                      });
+                        observer = StepObserver();
+                        var originalMsg = kyberInstance.decrypt(
+                            sk, encryptedMsg, observer: observer!);
+
+                        setState(() {
+                          _msgController.text = hex.encode(originalMsg);
+                        });
+                      },
+                      child: const Text("Decrypt")
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      if (observer == null) return;
+                      context.go("/kyber-pke/decrypt/steps",
+                      extra: observer?.steps);
                     },
-                    child: const Text("Decrypt")
-                ),
+                    child: const Text("View Steps")
+                  )
+                ],
               ),
               const SizedBox(height: 80),
 

@@ -27,13 +27,35 @@ class StepDataVisualizer extends StatelessWidget {
           title: selected!.key,
           data: selected!.value as PolynomialMatrix
       );
+    } else if (selected!.value is PKEPrivateKey) {
+      return PKEPrivateKeyVisualizer(
+          title: selected!.key,
+          data: selected!.value as PKEPrivateKey
+      );
+    } else if (selected!.value is PKEPublicKey) {
+      return PKEPublicKeyVisualizer(
+          title: selected!.key,
+          data: selected!.value as PKEPublicKey
+      );
+    } else if (selected!.value is KemPublicKey) {
+      KemPublicKey kemPublicKey = selected!.value as KemPublicKey;
+      return PKEPublicKeyVisualizer(
+          title: selected!.key,
+          data: kemPublicKey.publicKey
+      );
+    } else if (selected!.value is PKECypher) {
+      return PKECipherVisualizer(
+          title: selected!.key,
+          data: selected!.value as PKECypher
+      );
     } else if (selected!.value is Uint8List) {
       return BytesVisualizer(
           title: selected!.key,
           data: selected!.value as Uint8List
       );
     } else {
-      throw UnimplementedError("Object type visualization not implemented");
+      throw UnimplementedError("Visualization for object of type"
+          " ${ selected!.value.runtimeType } not implemented.");
     }
   }
 
@@ -98,7 +120,7 @@ class PolynomialRingVisualizer extends StatelessWidget {
             child: Row(
               children: [
                 if (backButton != null) backButton!,
-                const Text("Polynomial Ring")
+                Text("Polynomial Ring \"$title\"")
               ],
             ),
           ),
@@ -181,9 +203,9 @@ class _PolynomialMatrixVisualizerState extends State<PolynomialMatrixVisualizer>
                 ),
                 color: Color(0xFFCDCDCD)
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Text("Polynomial Matrix")
+                Text("Polynomial Matrix \"${widget.title}\"")
               ],
             ),
           ),
@@ -263,9 +285,9 @@ class BytesVisualizer extends StatelessWidget {
               ),
               color: Color(0xFFCDCDCD)
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Text("Bytes")
+                Text("Bytes \"$title\"")
               ],
             ),
           ),
@@ -274,6 +296,169 @@ class BytesVisualizer extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 1,
                 child: Center(child: Text("Bytes(${data.length}){${data.toString()}}")),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+}
+
+class PKEPublicKeyVisualizer extends StatelessWidget {
+  final String title;
+  final PKEPublicKey data;
+
+  const PKEPublicKeyVisualizer({
+    super.key,
+    required this.title,
+    required this.data
+  });
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Container(
+      decoration: const BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(5)),
+          color: Colors.white
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(
+                horizontal: 20
+            ),
+            decoration: const BoxDecoration(
+                borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(5),
+                    topLeft: Radius.circular(5)
+                ),
+                color: Color(0xFFCDCDCD)
+            ),
+            child: Row(
+              children: [
+                Text("Kyber PKE Public Key \"$title\"")
+              ],
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Center(child: Text("PKEPublicKey{${data.base64}}")),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+}
+
+class PKEPrivateKeyVisualizer extends StatelessWidget {
+  final String title;
+  final PKEPrivateKey data;
+
+  const PKEPrivateKeyVisualizer({
+    super.key,
+    required this.title,
+    required this.data
+  });
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Container(
+      decoration: const BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(5)),
+          color: Colors.white
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(
+                horizontal: 20
+            ),
+            decoration: const BoxDecoration(
+                borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(5),
+                    topLeft: Radius.circular(5)
+                ),
+                color: Color(0xFFCDCDCD)
+            ),
+            child: Row(
+              children: [
+                Text("Kyber PKE Private Key \"$title\"")
+              ],
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Center(child: Text("PKEPrivateKey{${data.base64}}")),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+}
+
+
+class PKECipherVisualizer extends StatelessWidget {
+  final String title;
+  final PKECypher data;
+
+  const PKECipherVisualizer({
+    super.key,
+    required this.title,
+    required this.data
+  });
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Container(
+      decoration: const BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(5)),
+          color: Colors.white
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(
+                horizontal: 20
+            ),
+            decoration: const BoxDecoration(
+                borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(5),
+                    topLeft: Radius.circular(5)
+                ),
+                color: Color(0xFFCDCDCD)
+            ),
+            child: Row(
+              children: [
+                Text("Cipher \"$title\"")
+              ],
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Center(child: Text("Cipher{${data.base64}}")),
               ),
             ),
           ),

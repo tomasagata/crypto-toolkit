@@ -5,17 +5,15 @@ import 'package:crypto_toolkit/screens/dilithium/dilithium_sign_page.dart';
 import 'package:crypto_toolkit/screens/dilithium/dilithium_verify_page.dart';
 import 'package:crypto_toolkit/screens/kyber/kyber_parameters_page.dart';
 import 'package:crypto_toolkit/screens/kyber/kyber_results_page.dart';
-import 'package:crypto_toolkit/screens/kyber/kyber_steps_page.dart';
 import 'package:crypto_toolkit/screens/kyber_pke/kyber_pke_decryption_page.dart';
-import 'package:crypto_toolkit/screens/kyber_pke/kyber_pke_decryption_steps_page.dart';
 import 'package:crypto_toolkit/screens/kyber_pke/kyber_pke_encryption_page.dart';
 import 'package:crypto_toolkit/screens/kyber_pke/kyber_pke_selection_page.dart';
 import 'package:crypto_toolkit/screens/lwe/lwe_page.dart';
+import 'package:crypto_toolkit/screens/steps_page.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:go_router/go_router.dart';
 import 'package:post_quantum/post_quantum.dart';
 
-import '../screens/kyber_pke/kyber_pke_encryption_steps_page.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _kyberSectionNavigatorKey = GlobalKey<NavigatorState>();
@@ -60,7 +58,7 @@ final router = GoRouter(
                     routes: [
                       GoRoute(
                         path: 'steps',
-                        builder: (context, state) => KyberStepsPage(steps: state.extra as List<Step>)
+                        builder: (context, state) => StepsPage(steps: state.extra as List<Step>)
                       )
                     ]
                   ),
@@ -85,7 +83,7 @@ final router = GoRouter(
                     routes: <RouteBase>[
                       GoRoute(
                         path: 'steps',
-                        builder: (context, state) => KyberPKEEncryptionStepsPage(steps: state.extra as List<Step>)
+                        builder: (context, state) => StepsPage(steps: state.extra as List<Step>)
                       )
                     ]
                   ),
@@ -95,7 +93,7 @@ final router = GoRouter(
                     routes: <RouteBase>[
                       GoRoute(
                         path: 'steps',
-                        builder: (context, state) => KyberPKeDecryptionStepsPage(steps: state.extra as List<Step>)
+                        builder: (context, state) => StepsPage(steps: state.extra as List<Step>)
                       )
                     ]
                   ),

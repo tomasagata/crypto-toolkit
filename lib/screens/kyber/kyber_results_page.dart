@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:go_router/go_router.dart';
 import 'package:post_quantum/post_quantum.dart';
 import 'package:crypto_toolkit/dto/kyber_flow_details.dart';
 import 'package:crypto_toolkit/widgets/fields/security_level_field.dart';
@@ -9,7 +10,9 @@ class KyberResultsPage extends StatefulWidget {
 
   final KyberFlowDetails flowDetails;
 
-  (String cipher, String clientKey, String serverKey) generateFlow() {
+  (String cipher, String clientKey, String serverKey) generateFlow(
+      StepObserver observer
+  ) {
 
     Kyber kyberInstance;
     if(flowDetails.securityLevel == KyberSecurityLevel.level2) {
@@ -24,11 +27,13 @@ class KyberResultsPage extends StatefulWidget {
 
     var (pkeCipher, clientSharedSecret) = kyberInstance.encapsulate(
       flowDetails.publicKey,
-      flowDetails.nonce
+      flowDetails.nonce,
+      observer: observer
     );
     var serverSharedKey = kyberInstance.decapsulate(
-        pkeCipher,
-        flowDetails.privateKey
+      pkeCipher,
+      flowDetails.privateKey,
+      observer: observer
     );
 
     return (
@@ -46,13 +51,16 @@ class _KyberResultsPageState extends State<KyberResultsPage> {
   final cipherFieldController = TextEditingController();
   final clientKeyFieldController = TextEditingController();
   final serverKeyFieldController = TextEditingController();
+  StepObserver observer = StepObserver();
 
 
   @override
   void initState() {
     super.initState();
 
-    var (cipher, clientSharedKey, serverSharedKey) = widget.generateFlow();
+    var (cipher, clientSharedKey, serverSharedKey) = widget.generateFlow(
+      observer
+    );
 
     // Set textFields to their values
     cipherFieldController.text = cipher;
@@ -244,6 +252,16 @@ class _KyberResultsPageState extends State<KyberResultsPage> {
               ),
             ]
           ),
+          const SizedBox(height: 50),
+
+          FilledButton(
+            onPressed: () {
+              context.go("/kyber-pke/decrypt/steps",
+                extra: observer.steps);
+            },
+            child: const Text("View Steps")
+          ),
+
           const SizedBox(height: 78)
         ]
       )
