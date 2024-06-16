@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:convert/convert.dart';
+import 'package:go_router/go_router.dart';
 import 'package:post_quantum/post_quantum.dart';
 import 'package:crypto_toolkit/widgets/fields/key_field.dart';
 import 'package:crypto_toolkit/widgets/fields/message_field.dart';
@@ -96,36 +97,6 @@ class _DilithiumVerifyPageState extends State<DilithiumVerifyPage> {
                 .textTheme
                 .displayLarge),
             const SizedBox(height: 16),
-
-            Text(
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
-                    "sed do eiusmod tempor incididunt ut labore et dolore magna"
-                    " aliqua. Ut enim ad minim veniam, quis nostrud exercitation "
-                    "ullamco laboris nisi ut aliquip ex ea commodo consequat. "
-                    "Duis aute irure dolor in reprehenderit in voluptate velit "
-                    "esse cillum dolore eu fugiat nulla pariatur. Excepteur sint "
-                    "occaecat cupidatat non proident, sunt in culpa qui officia "
-                    "deserunt mollit anim id est laborum. Lorem ipsum dolor sit "
-                    "amet, consectetur adipiscing elit, sed do eiusmod tempor "
-                    "incididunt ut labore et dolore magna aliqua. Ut enim ad minim"
-                    " veniam, quis nostrud exercitation ullamco laboris nisi ut "
-                    "aliquip ex ea commodo consequat.Duis aute irure dolor in "
-                    "reprehenderit in voluptate velit esse cillum dolore eu "
-                    "fugiat nulla pariatur. Excepteur sint occaecat cupidatat "
-                    "non proident, sunt in culpa qui officia deserunt mollit anim"
-                    " id est laborum. Lorem ipsum dolor sit amet, consectetur "
-                    "adipiscing elit, sed do eiusmod tempor incididunt ut labore"
-                    " et dolore magna aliqua. Ut enim ad minim veniam, quis nostr"
-                    "ud exercitation ullamco laboris nisi ut aliquip ex ea commod"
-                    "o consequat. Duis aute irure dolor in reprehenderit in volup"
-                    "tate velit esse cillum dolore eu fugiat nulla pariatur. "
-                    "Excepteur sint occaecat cupidatat non proident, sunt in "
-                    "culpa qui officia deserunt mollit anim id est laborum",
-                style: Theme
-                    .of(context)
-                    .textTheme
-                    .bodyLarge),
-            const SizedBox(height: 78),
 
             FormBuilder(
                 key: _seedFormKey,
@@ -293,6 +264,16 @@ class _DilithiumVerifyPageState extends State<DilithiumVerifyPage> {
                     maxHeight: 200,
                   ),
                   alignLabelWithHint: true
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            Align(
+              alignment: Alignment.centerLeft,
+              child: BackButton(
+                onPressed: () {
+                  context.pop();
+                },
               ),
             ),
 

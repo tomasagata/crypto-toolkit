@@ -144,3 +144,92 @@ class ParallaxFlowDelegate extends FlowDelegate {
   }
 
 }
+
+class UnorderedList extends StatelessWidget {
+  final String indicatorCharacter;
+  final List<Widget> children;
+  final TextStyle indicatorStyle;
+  final double separation;
+
+  const UnorderedList({
+    super.key,
+    String? indicatorCharacter,
+    required this.children,
+    TextStyle? indicatorStyle,
+    double? separation
+  }) :
+    indicatorCharacter = indicatorCharacter ?? '\u2022',
+    indicatorStyle = indicatorStyle ?? const TextStyle(
+      fontSize: 16,
+      height: 1.55,
+    ),
+    separation = separation ?? 5
+  ;
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children.map((childWidget) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              indicatorCharacter,
+              style: indicatorStyle
+            ),
+            SizedBox(
+              width: separation,
+            ),
+            Expanded(child: childWidget),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+}
+
+class OrderedList extends StatelessWidget {
+  final List<Widget> children;
+  final TextStyle numberingStyle;
+  final double separation;
+
+  const OrderedList({
+    super.key,
+    required this.children,
+    TextStyle? numberingStyle,
+    double? separation
+  }) :
+        numberingStyle = numberingStyle ?? const TextStyle(
+          fontSize: 16,
+          height: 1.55,
+        ),
+        separation = separation ?? 5
+  ;
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: List<Widget>.generate(children.length, (index) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                "${index + 1}.",
+                style: numberingStyle
+            ),
+            SizedBox(
+              width: separation,
+            ),
+            Expanded(child: children[index]),
+          ],
+        );
+      })
+    );
+  }
+
+}

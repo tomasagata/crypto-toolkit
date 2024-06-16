@@ -51,9 +51,28 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+  msix: ^3.16.7
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
+# Configuration for app icon generation
+flutter_launcher_icons:
+  android: false
+  ios: false
+  web:
+    generate: false
+  windows:
+    generate: true
+    image_path: "assets/icon/icon_squircle.png"
+    icon_size: 128 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "assets/icon/icon_squircle.png"
+
+# Configuration for msix installer creation
+msix_config:
+  display_name: CRYSTALS-Toolkit
+  msix_version: 0.0.0.1
+  logo_path: ./assets/icon/icon_squircle.png
 
 # The following section is specific to Flutter packages.
 flutter:
@@ -70,6 +89,8 @@ flutter:
      - assets/images/lwe-post-noise.png
      - assets/images/lattice_background.webp
      - assets/images/black-lattice-background.jpg
+     - assets/images/as.png
+     - assets/images/ase.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

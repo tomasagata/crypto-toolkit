@@ -104,12 +104,85 @@ class _KyberParametersPageState extends State<KyberParametersPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                        "Kyber is a quantum-resistant key encapsulation mechanism or KEM. "
-                        "It uses the learning with errors problem as a mathematical "
-                        "basis to provide its cryptographic strength. A KEM is a "
-                        "mechanism that allows two parties to safely obtain a shared "
-                        "secret over a possibly unsafe medium.",
-                        style: Theme.of(context).textTheme.bodyLarge),
+                      "Kyber is a post-quantum cryptographic algorithm that relies on the Learning with Errors (LWE) problem to ensure security. It's designed to be resistant to attacks from both classical and quantum computers. Let's break down how Kyber leverages the LWE problem to provide secure communication.",
+                      style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height: 10),
+
+                    Text("Overview of Kyber",
+                      style: Theme.of(context).textTheme.displaySmall),
+                    Text(
+                      "Kyber is a key encapsulation mechanism (KEM). A KEM is used to securely establish a shared secret between two parties, which can then be used for encrypted communication. The main operations in Kyber involve:\n"
+                        "\u2022 Key Generation: Generating a public and private key pair.\n"
+                        "\u2022 Encapsulation: Using the public key to generate a shared secret and a ciphertext.\n"
+                        "\u2022 Decapsulation: Using the private key to recover the shared secret from the ciphertext.\n",
+                      style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height: 10),
+
+                    Text("How LWE is Applied in Kyber",
+                      style: Theme.of(context).textTheme.displaySmall),
+                    Text(
+                      "Kyber is based on a variant of the LWE problem known as Module-LWE (MLWE). Here's a step-by-step explanation of how Kyber uses this problem:",
+                      style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height: 5),
+
+                    Text("1. Key Generation",
+                      style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      "\u2022 Generate Matrices and Vectors: Kyber starts by generating a random matrix \"A\" and secret vectors \"s\" and \"e\". These vectors contain small random errors.\n"
+                      "\u2022 Compute Public Key: The public key is computed as:\n"
+                        "b = A * s + e\n"
+                      "Where:\n"
+                        "\u2022 \"b\" is the public key,\n"
+                        "\u2022 \"A\" is a public matrix,\n"
+                        "\u2022 \"s\" is the secret key,\n"
+                        "\u2022 and \"e\" is the error vector.\n",
+                      style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height: 5),
+
+                    Text("2. Encapsulation",
+                      style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      "\u2022 Generate Random Vector: A random vector \"r\" is generated.\n"
+                      "\u2022 Compute Ciphertext Components:\n"
+                        "    The first part of the ciphertext \"u\" is computed as:\n"
+                        "         u = A * r + e1\n"
+                        "    where \"e1\" is a small error vector.\n"
+                        "    The second part of the ciphertext \"v\" is computed as:\n"
+                        "         v = b^T * r + e2 + m\n"
+                        "    Here, \"b^T\" is the transpose of the public key \"b\", \"e2\" is another small error vector, and \"m\" is the message (usually represented as a polynomial).\n"
+                      "\u2022 Form the Ciphertext: The ciphertext is composed of \"u\" and \"v\".",
+                      style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height: 10),
+
+                    Text("3. Decapsulation",
+                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      "\u2022 Recovering the Shared Secret:\n"
+                        "    Using the private key \"s\", compute:\n"
+                        "        v' = u^T * s\n"
+                        "    Here, \"u^T\" is the transpose of \"u\".\n"
+
+                        "    Subtract \"v'\" from \"v\" to obtain:\n"
+                        "        m' = v - v'\n"
+                        "    Due to the small errors, \"m'\" is a noisy version of the original message \"m\", but it can be corrected to recover the original message.\n",
+                      style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height: 10),
+
+                    Text("Why This Works",
+                        style: Theme.of(context).textTheme.displaySmall),
+                    Text(
+                      "The security of Kyber relies on the hardness of the MLWE problem. The errors introduced in the process ensure that an attacker cannot easily reverse the operations to recover the secret key or the shared secret. Even with a quantum computer, solving the MLWE problem is computationally infeasible with current techniques.",
+                      style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height: 10),
+
+                    Text("Applications of Kyber",
+                        style: Theme.of(context).textTheme.displaySmall),
+                    Text(
+                      "Kyber is used in scenarios where secure communication is crucial, such as:\n"
+                        "\u2022 Secure Messaging: Establishing a shared secret for encrypting messages between parties.\n"
+                        "\u2022 Secure Key Exchange: Safely exchanging cryptographic keys over an insecure channel.\n"
+                        "\u2022 Post-Quantum Security: Ensuring long-term security against potential future quantum attacks.\n",
+                      style: Theme.of(context).textTheme.bodyLarge),
                     const SizedBox(height: 78),
 
                     Center(

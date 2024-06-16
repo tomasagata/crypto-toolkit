@@ -254,12 +254,23 @@ class _KyberResultsPageState extends State<KyberResultsPage> {
           ),
           const SizedBox(height: 50),
 
-          FilledButton(
-            onPressed: () {
-              context.go("/kyber-pke/decrypt/steps",
-                extra: observer.steps);
-            },
-            child: const Text("View Steps")
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              BackButton(
+                onPressed: () {
+                  context.pop();
+                },
+              ),
+
+              FilledButton(
+                  onPressed: () {
+                    context.push("/kyber-pke/decrypt/steps",
+                        extra: observer.steps);
+                  },
+                  child: const Text("View Steps")
+              ),
+            ],
           ),
 
           const SizedBox(height: 78)

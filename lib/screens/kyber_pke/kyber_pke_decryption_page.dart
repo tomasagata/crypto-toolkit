@@ -84,36 +84,6 @@ class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
                   .displayLarge),
               const SizedBox(height: 16),
 
-              Text(
-                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
-                      "sed do eiusmod tempor incididunt ut labore et dolore magna"
-                      " aliqua. Ut enim ad minim veniam, quis nostrud exercitation "
-                      "ullamco laboris nisi ut aliquip ex ea commodo consequat. "
-                      "Duis aute irure dolor in reprehenderit in voluptate velit "
-                      "esse cillum dolore eu fugiat nulla pariatur. Excepteur sint "
-                      "occaecat cupidatat non proident, sunt in culpa qui officia "
-                      "deserunt mollit anim id est laborum. Lorem ipsum dolor sit "
-                      "amet, consectetur adipiscing elit, sed do eiusmod tempor "
-                      "incididunt ut labore et dolore magna aliqua. Ut enim ad minim"
-                      " veniam, quis nostrud exercitation ullamco laboris nisi ut "
-                      "aliquip ex ea commodo consequat.Duis aute irure dolor in "
-                      "reprehenderit in voluptate velit esse cillum dolore eu "
-                      "fugiat nulla pariatur. Excepteur sint occaecat cupidatat "
-                      "non proident, sunt in culpa qui officia deserunt mollit anim"
-                      " id est laborum. Lorem ipsum dolor sit amet, consectetur "
-                      "adipiscing elit, sed do eiusmod tempor incididunt ut labore"
-                      " et dolore magna aliqua. Ut enim ad minim veniam, quis nostr"
-                      "ud exercitation ullamco laboris nisi ut aliquip ex ea commod"
-                      "o consequat. Duis aute irure dolor in reprehenderit in volup"
-                      "tate velit esse cillum dolore eu fugiat nulla pariatur. "
-                      "Excepteur sint occaecat cupidatat non proident, sunt in "
-                      "culpa qui officia deserunt mollit anim id est laborum",
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .bodyLarge),
-              const SizedBox(height: 78),
-
               FormBuilder(
                   key: _seedFormKey,
                   child: Column(
@@ -259,7 +229,7 @@ class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
                   FilledButton(
                     onPressed: () {
                       if (observer == null) return;
-                      context.go("/kyber-pke/decrypt/steps",
+                      context.push("/kyber-pke/decrypt/steps",
                       extra: observer?.steps);
                     },
                     child: const Text("View Steps")
@@ -287,6 +257,17 @@ class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
                     alignLabelWithHint: true
                 ),
               ),
+              const SizedBox(height: 20),
+
+              Align(
+                alignment: Alignment.centerLeft,
+                child: BackButton(
+                  onPressed: () {
+                    context.pop();
+                  },
+                ),
+              ),
+
               const SizedBox(height: 80),
 
             ]),

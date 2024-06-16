@@ -26,31 +26,19 @@ class DilithiumSelectionPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    "Dilithium is a digital signature scheme that is part of the CRYSTALS (Cryptographic Suite for Algebraic Lattices) family of algorithms. Like Kyber, it is designed to be secure against attacks by both classical and quantum computers. The security of Dilithium relies on the hardness of the Learning with Errors (LWE) problem and its variant, the Short Integer Solution (SIS) problem.",
+                    style: Theme.of(context).textTheme.bodyLarge),
+                  const SizedBox(height: 10),
 
-                  Text("Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
-                      "sed do eiusmod tempor incididunt ut labore et dolore magna "
-                      "aliqua. Ut enim ad minim veniam, quis nostrud exercitation "
-                      "ullamco laboris nisi ut aliquip ex ea commodo consequat. "
-                      "Duis aute irure dolor in reprehenderit in voluptate velit "
-                      "esse cillum dolore eu fugiat nulla pariatur. Excepteur sint "
-                      "occaecat cupidatat non proident, sunt in culpa qui officia "
-                      "deserunt mollit anim id est laborum. Lorem ipsum dolor sit "
-                      "amet, consectetur adipiscing elit, sed do eiusmod tempor "
-                      "incididunt ut labore et dolore magna aliqua. Ut enim ad minim "
-                      "veniam, quis nostrud exercitation ullamco laboris nisi ut "
-                      "aliquip ex ea commodo consequat.Duis aute irure dolor in "
-                      "reprehenderit in voluptate velit esse cillum dolore eu fugiat "
-                      "nulla pariatur. Excepteur sint occaecat cupidatat non proident,"
-                      " sunt in culpa qui officia deserunt mollit anim id est laborum. "
-                      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed "
-                      "do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
-                      "Ut enim ad minim veniam, quis nostrud exercitation ullamco "
-                      "laboris nisi ut aliquip ex ea commodo consequat. Duis aute "
-                      "irure dolor in reprehenderit in voluptate velit esse cillum "
-                      "dolore eu fugiat nulla pariatur. Excepteur sint occaecat "
-                      "cupidatat non proident, sunt in culpa qui officia deserunt "
-                      "mollit anim id est laborum",
-                      style: Theme.of(context).textTheme.bodyLarge),
+                  Text("Overview of Dilithium",
+                      style: Theme.of(context).textTheme.displaySmall),
+                  Text(
+                    "Dilithium involves three main operations:\n"
+                      "\u2022 Key Generation: Creating a public and private key pair.\n"
+                      "\u2022 Signing: Generating a digital signature for a message.\n"
+                      "\u2022 Verification: Verifying the authenticity of a signed message using the public key.\n",
+                    style: Theme.of(context).textTheme.bodyLarge),
                   const SizedBox(height: 78),
 
                   Row(
