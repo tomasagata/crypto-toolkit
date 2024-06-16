@@ -7,7 +7,7 @@ import 'package:crypto_toolkit/widgets/fields/key_field.dart';
 import 'package:crypto_toolkit/widgets/fields/message_field.dart';
 import 'package:crypto_toolkit/widgets/fields/security_level_field.dart';
 import 'package:crypto_toolkit/widgets/fields/seed_field.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
@@ -21,7 +21,6 @@ class DilithiumSignPage extends StatefulWidget {
 class _DilithiumSignPageState extends State<DilithiumSignPage> {
   final _skController = TextEditingController();
   final _messageController = TextEditingController();
-  final _signatureController = TextEditingController();
   final _formKey = GlobalKey<FormBuilderState>();
   final _seedFormKey = GlobalKey<FormBuilderState>();
 
@@ -175,85 +174,141 @@ class _DilithiumSignPageState extends State<DilithiumSignPage> {
 
               const SizedBox(height: 60),
 
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton(
-                    child: const Text("Sign"),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  BackButton(
                     onPressed: () {
-                      if (!_seedFormKey.currentState!.saveAndValidate()){
-                        return;
+                      context.pop();
+                    },
+                  ),
+                  FilledButton(
+                      child: const Text("Sign"),
+                      onPressed: () {
+                        if (!_seedFormKey.currentState!.saveAndValidate()){
+                          return;
+                        }
+
+                        if (!_formKey.currentState!.saveAndValidate()){
+                          return;
+                        }
+
+                        DilithiumSecurityLevel securityLevel = _seedFormKey
+                            .currentState!.value["securityLevel"];
+
+                        var skBytes = base64Decode(_formKey.currentState!.value["privateKey"]);
+                        var sk = DilithiumPrivateKey
+                            .deserialize(skBytes, securityLevel.value);
+
+                        var message = _formKey.currentState!.value["message"];
+
+
+                        Dilithium dilithiumInstance;
+                        if(securityLevel == DilithiumSecurityLevel.level2) {
+                          dilithiumInstance = Dilithium.level2();
+                        } else if (securityLevel == DilithiumSecurityLevel.level3) {
+                          dilithiumInstance = Dilithium.level3();
+                        } else if (securityLevel == DilithiumSecurityLevel.level5) {
+                          dilithiumInstance = Dilithium.level5();
+                        } else {
+                          throw UnimplementedError("Security level not implemented");
+                        }
+
+                        var signature = dilithiumInstance.sign(sk, message);
+
+                        showDialog(
+                            context: context,
+                            builder: (context) {
+                              return ResultDialog(
+                                  result: signature.base64);
+                            }
+                        );
+
                       }
-
-                      if (!_formKey.currentState!.saveAndValidate()){
-                        return;
-                      }
-
-                      DilithiumSecurityLevel securityLevel = _seedFormKey
-                          .currentState!.value["securityLevel"];
-
-                      var skBytes = base64Decode(_formKey.currentState!.value["privateKey"]);
-                      var sk = DilithiumPrivateKey
-                          .deserialize(skBytes, securityLevel.value);
-
-                      var message = _formKey.currentState!.value["message"];
-
-
-                      Dilithium dilithiumInstance;
-                      if(securityLevel == DilithiumSecurityLevel.level2) {
-                        dilithiumInstance = Dilithium.level2();
-                      } else if (securityLevel == DilithiumSecurityLevel.level3) {
-                        dilithiumInstance = Dilithium.level3();
-                      } else if (securityLevel == DilithiumSecurityLevel.level5) {
-                        dilithiumInstance = Dilithium.level5();
-                      } else {
-                        throw UnimplementedError("Security level not implemented");
-                      }
-
-                      var signature = dilithiumInstance.sign(sk, message);
-
-                      setState(() {
-                        _signatureController.text = signature.base64;
-                      });
-
-                    }
-                ),
-              ),
-              const SizedBox(height: 80),
-
-              Text("Result", style: Theme
-                  .of(context)
-                  .textTheme
-                  .titleLarge),
-              const SizedBox(height: 14),
-              TextField(
-                autocorrect: false,
-                minLines: null,
-                maxLines: null,
-                expands: true,
-                controller: _signatureController,
-                enableSuggestions: false,
-                decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    label: Text("Signature"),
-                    constraints: BoxConstraints(
-                      maxHeight: 200,
-                    ),
-                    alignLabelWithHint: true
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              Align(
-                alignment: Alignment.centerLeft,
-                child: BackButton(
-                  onPressed: () {
-                    context.pop();
-                  },
-                ),
+                  ),
+                ],
               ),
               const SizedBox(height: 80),
 
             ]),
+      ),
+    );
+  }
+}
+
+class ResultDialog extends StatefulWidget {
+  final String result;
+
+  const ResultDialog({
+    super.key,
+    required this.result
+  });
+
+  @override
+  State<ResultDialog> createState() => _ResultDialogState();
+}
+
+class _ResultDialogState extends State<ResultDialog> {
+  var controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    controller.text = widget.result;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Dialog(
+      backgroundColor: const Color(0xFFEDEDED),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close)),
+                const SizedBox(width: 10),
+                const Text("Results")
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    left: 10,
+                    right: 10,
+                    bottom: 8,
+                    top: 8
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      autocorrect: false,
+                      minLines: null,
+                      maxLines: null,
+                      expands: true,
+                      enableSuggestions: false,
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          label: Text("Signature"),
+                          constraints: BoxConstraints(
+                            maxHeight: 200,
+                          ),
+                          alignLabelWithHint: true
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

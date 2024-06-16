@@ -60,6 +60,7 @@ class DilithiumSelectionPage extends StatelessWidget {
                 ]
               ),
             ),
+            const SizedBox(height: 80),
           ],
         ),
       ),

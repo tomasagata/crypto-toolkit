@@ -8,7 +8,7 @@ import 'package:crypto_toolkit/widgets/fields/message_field.dart';
 import 'package:crypto_toolkit/widgets/fields/security_level_field.dart';
 import 'package:crypto_toolkit/widgets/fields/seed_field.dart';
 import 'package:crypto_toolkit/widgets/fields/signature_field.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
@@ -24,7 +24,6 @@ class _DilithiumVerifyPageState extends State<DilithiumVerifyPage> {
   final _pkController = TextEditingController();
   final _messageController = TextEditingController();
   final _signatureController = TextEditingController();
-  final _validityFieldController = TextEditingController();
   final _formKey = GlobalKey<FormBuilderState>();
   final _seedFormKey = GlobalKey<FormBuilderState>();
 
@@ -196,90 +195,145 @@ class _DilithiumVerifyPageState extends State<DilithiumVerifyPage> {
 
             const SizedBox(height: 60),
 
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton(
-                child: const Text("Verify"),
-                onPressed: () {
-                  if (!_seedFormKey.currentState!.saveAndValidate()){
-                    return;
-                  }
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                BackButton(
+                  onPressed: () {
+                    context.pop();
+                  },
+                ),
+                FilledButton(
+                  child: const Text("Verify"),
+                  onPressed: () {
+                    if (!_seedFormKey.currentState!.saveAndValidate()){
+                      return;
+                    }
 
-                  if (!_formKey.currentState!.saveAndValidate()){
-                    return;
-                  }
+                    if (!_formKey.currentState!.saveAndValidate()){
+                      return;
+                    }
 
-                  DilithiumSecurityLevel securityLevel = _seedFormKey
-                      .currentState!.value["securityLevel"];
+                    DilithiumSecurityLevel securityLevel = _seedFormKey
+                        .currentState!.value["securityLevel"];
 
-                  var pkBytes = base64Decode(_formKey.currentState!.value["publicKey"]);
-                  var pk = DilithiumPublicKey
-                      .deserialize(pkBytes, securityLevel.value);
+                    var pkBytes = base64Decode(_formKey.currentState!.value["publicKey"]);
+                    var pk = DilithiumPublicKey
+                        .deserialize(pkBytes, securityLevel.value);
 
-                  var message = _formKey.currentState!.value["message"];
+                    var message = _formKey.currentState!.value["message"];
 
-                  var signatureBytes = base64Decode(
-                      _formKey.currentState!.value["signature"]);
-                  var signature = DilithiumSignature
-                      .deserialize(signatureBytes, securityLevel.value);
+                    var signatureBytes = base64Decode(
+                        _formKey.currentState!.value["signature"]);
+                    var signature = DilithiumSignature
+                        .deserialize(signatureBytes, securityLevel.value);
 
 
-                  Dilithium dilithiumInstance;
-                  if(securityLevel == DilithiumSecurityLevel.level2) {
-                    dilithiumInstance = Dilithium.level2();
-                  } else if (securityLevel == DilithiumSecurityLevel.level3) {
-                    dilithiumInstance = Dilithium.level3();
-                  } else if (securityLevel == DilithiumSecurityLevel.level5) {
-                    dilithiumInstance = Dilithium.level5();
-                  } else {
-                    throw UnimplementedError("Security level not implemented");
-                  }
+                    Dilithium dilithiumInstance;
+                    if(securityLevel == DilithiumSecurityLevel.level2) {
+                      dilithiumInstance = Dilithium.level2();
+                    } else if (securityLevel == DilithiumSecurityLevel.level3) {
+                      dilithiumInstance = Dilithium.level3();
+                    } else if (securityLevel == DilithiumSecurityLevel.level5) {
+                      dilithiumInstance = Dilithium.level5();
+                    } else {
+                      throw UnimplementedError("Security level not implemented");
+                    }
 
-                  var isValid = dilithiumInstance.verify(pk, message, signature);
+                    var isValid = dilithiumInstance.verify(pk, message, signature);
 
-                  setState(() {
-                    _validityFieldController.text = isValid.toString();
-                  });
-                },
-              ),
+                    showDialog(
+                        context: context,
+                        builder: (context) {
+                          return ResultDialog(
+                              result: isValid.toString());
+                        }
+                    );
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 80),
-
-            Text("Result", style: Theme
-                .of(context)
-                .textTheme
-                .titleLarge),
-            const SizedBox(height: 14),
-            TextField(
-              autocorrect: false,
-              minLines: null,
-              maxLines: null,
-              expands: true,
-              controller: _validityFieldController,
-              enableSuggestions: false,
-              decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  label: Text("Is valid?"),
-                  constraints: BoxConstraints(
-                    maxHeight: 200,
-                  ),
-                  alignLabelWithHint: true
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            Align(
-              alignment: Alignment.centerLeft,
-              child: BackButton(
-                onPressed: () {
-                  context.pop();
-                },
-              ),
-            ),
-
             const SizedBox(height: 80),
 
           ]
+        ),
+      ),
+    );
+  }
+}
+
+class ResultDialog extends StatefulWidget {
+  final String result;
+
+  const ResultDialog({
+    super.key,
+    required this.result
+  });
+
+  @override
+  State<ResultDialog> createState() => _ResultDialogState();
+}
+
+class _ResultDialogState extends State<ResultDialog> {
+  var controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    controller.text = widget.result;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Dialog(
+      backgroundColor: const Color(0xFFEDEDED),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close)),
+                const SizedBox(width: 10),
+                const Text("Results")
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    left: 10,
+                    right: 10,
+                    bottom: 8,
+                    top: 8
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      autocorrect: false,
+                      minLines: null,
+                      maxLines: null,
+                      expands: true,
+                      enableSuggestions: false,
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          label: Text("Signature checks out?"),
+                          constraints: BoxConstraints(
+                            maxHeight: 200,
+                          ),
+                          alignLabelWithHint: true
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

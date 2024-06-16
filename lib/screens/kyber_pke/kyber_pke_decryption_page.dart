@@ -7,7 +7,7 @@ import 'package:crypto_toolkit/widgets/fields/cipher_field.dart';
 import 'package:crypto_toolkit/widgets/fields/key_field.dart';
 import 'package:crypto_toolkit/widgets/fields/security_level_field.dart';
 import 'package:crypto_toolkit/widgets/fields/seed_field.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
@@ -20,11 +20,9 @@ class KyberPKEDecryptionPage extends StatefulWidget {
 
 class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
   final _skController = TextEditingController();
-  final _msgController = TextEditingController();
   final _encryptedMsgController = TextEditingController();
   final _formKey = GlobalKey<FormBuilderState>();
   final _seedFormKey = GlobalKey<FormBuilderState>();
-  StepObserver? observer;
 
   final Map<String, dynamic> initValues = {
     "securityLevel": KyberSecurityLevel.level2
@@ -171,7 +169,13 @@ class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
               const SizedBox(height: 60),
 
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  BackButton(
+                    onPressed: () {
+                      context.pop();
+                    },
+                  ),
                   FilledButton(
                       onPressed: () {
                         if (!_seedFormKey.currentState!.saveAndValidate()){
@@ -197,7 +201,6 @@ class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
                           );
                           encryptedMsg = PKECypher.deserialize(encryptedMsgBytes, securityLevel.value);
                         } catch (err) {
-                          print(err);
                           _formKey
                               .currentState!
                               .fields["encryptedMsg"]
@@ -216,61 +219,120 @@ class _KyberPKEDecryptionPageState extends State<KyberPKEDecryptionPage> {
                           throw UnimplementedError("Security level not implemented");
                         }
 
-                        observer = StepObserver();
+                        var observer = StepObserver();
                         var originalMsg = kyberInstance.decrypt(
-                            sk, encryptedMsg, observer: observer!);
+                            sk, encryptedMsg, observer: observer);
 
-                        setState(() {
-                          _msgController.text = hex.encode(originalMsg);
-                        });
+                        showDialog(
+                            context: context,
+                            builder: (context) {
+                              return ResultDialog(
+                                  steps: observer.steps,
+                                  result: hex.encode(originalMsg));
+                            }
+                        );
                       },
                       child: const Text("Decrypt")
-                  ),
-                  FilledButton(
-                    onPressed: () {
-                      if (observer == null) return;
-                      context.push("/kyber-pke/decrypt/steps",
-                      extra: observer?.steps);
-                    },
-                    child: const Text("View Steps")
                   )
                 ],
               ),
               const SizedBox(height: 80),
 
-              Text("Result", style: Theme
-                  .of(context)
-                  .textTheme
-                  .titleLarge),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _msgController,
-                autocorrect: false,
-                maxLines: 5,
-                enableSuggestions: false,
-                decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    label: Text("Original message"),
-                    constraints: BoxConstraints(
-                      maxHeight: 200,
-                    ),
-                    alignLabelWithHint: true
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              Align(
-                alignment: Alignment.centerLeft,
-                child: BackButton(
-                  onPressed: () {
-                    context.pop();
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 80),
-
             ]),
+      ),
+    );
+  }
+}
+
+class ResultDialog extends StatefulWidget {
+  final List<Step> steps;
+  final String result;
+
+  const ResultDialog({
+    super.key,
+    required this.steps,
+    required this.result
+  });
+
+  @override
+  State<ResultDialog> createState() => _ResultDialogState();
+}
+
+class _ResultDialogState extends State<ResultDialog> {
+  var controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    controller.text = widget.result;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Dialog(
+      backgroundColor: const Color(0xFFEDEDED),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close)),
+                      const SizedBox(width: 10),
+                      const Text("Results")
+                    ],
+                  ),
+                ),
+                FilledButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      context.push("/kyber-pke/decrypt/steps",
+                          extra: widget.steps);
+                    },
+                    child: const Text("View steps"))
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    left: 10,
+                    right: 10,
+                    bottom: 8,
+                    top: 8
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      autocorrect: false,
+                      minLines: null,
+                      maxLines: null,
+                      expands: true,
+                      enableSuggestions: false,
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          label: Text("Decrypted Message"),
+                          constraints: BoxConstraints(
+                            maxHeight: 200,
+                          ),
+                          alignLabelWithHint: true
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
