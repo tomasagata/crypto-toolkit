@@ -11,6 +11,8 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
+import '../../widgets/result_dialog.dart';
+
 class DilithiumSignPage extends StatefulWidget {
   const DilithiumSignPage({super.key});
 
@@ -220,7 +222,8 @@ class _DilithiumSignPageState extends State<DilithiumSignPage> {
                             context: context,
                             builder: (context) {
                               return ResultDialog(
-                                  result: signature.base64);
+                                resultLabel: "Signature",
+                                result: signature.base64);
                             }
                         );
 
@@ -231,84 +234,6 @@ class _DilithiumSignPageState extends State<DilithiumSignPage> {
               const SizedBox(height: 80),
 
             ]),
-      ),
-    );
-  }
-}
-
-class ResultDialog extends StatefulWidget {
-  final String result;
-
-  const ResultDialog({
-    super.key,
-    required this.result
-  });
-
-  @override
-  State<ResultDialog> createState() => _ResultDialogState();
-}
-
-class _ResultDialogState extends State<ResultDialog> {
-  var controller = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    controller.text = widget.result;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-
-    return Dialog(
-      backgroundColor: const Color(0xFFEDEDED),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close)),
-                const SizedBox(width: 10),
-                const Text("Results")
-              ],
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                    left: 10,
-                    right: 10,
-                    bottom: 8,
-                    top: 8
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: controller,
-                      autocorrect: false,
-                      minLines: null,
-                      maxLines: null,
-                      expands: true,
-                      enableSuggestions: false,
-                      readOnly: true,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          label: Text("Signature"),
-                          constraints: BoxConstraints(
-                            maxHeight: 200,
-                          ),
-                          alignLabelWithHint: true
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

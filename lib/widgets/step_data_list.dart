@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart' hide Step;
 import 'package:post_quantum/post_quantum.dart';
 
+enum _DataType {
+  parameter("Parameter", Color(0xFFFFE88E), Color(0xFFFFD034)),
+  result("Result", Color(0xFFBEFF8C), Color(0xFF76FF03));
+
+  const _DataType(this.label, this.baseColor, this.selectedColor);
+  final Color baseColor;
+  final Color selectedColor;
+  final String label;
+}
+
 class StepDataList extends StatelessWidget {
   final Step step;
   final MapEntry<String, Object>? selected;
@@ -28,10 +38,10 @@ class StepDataList extends StatelessWidget {
                   height: 4),
               itemBuilder: (context, index) {
                 Map<String, Object> map = step.parameters;
-                String label = "Parameter";
+                var type = _DataType.parameter;
                 if (index >= step.parameters.length) {
                   map = step.results;
-                  label = "Result";
+                  type = _DataType.result;
                   index = index - step.parameters.length;
                 }
 
@@ -39,13 +49,39 @@ class StepDataList extends StatelessWidget {
                     .elementAt(index);
                 bool isSelected = selected?.key == element.key;
 
-                return StepDataListItem(
+                return _StepDataListItem(
+                  type: type,
                   onTap: () => onSelect(element),
                   isSelected: isSelected,
                   child: Column(
                     children: [
-                      Text(label),
-                      Text(element.key),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Ink(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 2),
+                          decoration: const BoxDecoration(
+                            // borderRadius: BorderRadius.only(
+                            //     topLeft: Radius.circular(6)),
+                            border: Border(
+                              right: BorderSide(color: Color(0xFF868686)),
+                              bottom: BorderSide(color: Color(0xFF868686)),
+                              left: BorderSide.none,
+                              top: BorderSide.none
+                            )
+                          ),
+                          child: Text(type.label,
+                            style: const TextStyle(color: Color(0xFF5B5B5B))),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            child: Text(element.key)),
+                        )),
                     ],
                   )
                 );
@@ -59,14 +95,15 @@ class StepDataList extends StatelessWidget {
   
 }
 
-class StepDataListItem extends StatelessWidget {
+class _StepDataListItem extends StatelessWidget {
   final bool isSelected;
   final Widget? child;
   final void Function()? onTap;
+  final _DataType type;
 
-  const StepDataListItem({
-    super.key,
+  const _StepDataListItem({
     required this.isSelected,
+    required this.type,
     this.child,
     this.onTap
   });
@@ -83,7 +120,7 @@ class StepDataListItem extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: const BorderRadius.all(
               Radius.circular(6)),
-          color: isSelected? Colors.lightGreenAccent: Colors.white
+          color: isSelected? type.selectedColor: type.baseColor
         ),
         child: child
       )
