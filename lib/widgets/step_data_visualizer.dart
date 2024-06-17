@@ -129,7 +129,9 @@ class PolynomialRingVisualizer extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 1,
                 child: Center(
-                  child: Text(data.toString())),
+                  child: SingleChildScrollView(
+                    child: Text(data.toString())),
+                ),
               ),
             ),
           ),
@@ -295,7 +297,10 @@ class BytesVisualizer extends StatelessWidget {
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
-                child: Center(child: Text("Bytes(${data.length}){${data.toString()}}")),
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Text("Bytes(${data.length}){${data.toString()}}")),
+                ),
               ),
             ),
           ),
@@ -349,7 +354,10 @@ class PKEPublicKeyVisualizer extends StatelessWidget {
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
-                child: Center(child: Text("PKEPublicKey{${data.base64}}")),
+                child: Center(
+                  child: SingleChildScrollView(
+                      child: Text("PKEPublicKey{${data.base64}}")),
+                ),
               ),
             ),
           ),
@@ -403,7 +411,10 @@ class PKEPrivateKeyVisualizer extends StatelessWidget {
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
-                child: Center(child: Text("PKEPrivateKey{${data.base64}}")),
+                child: Center(
+                  child: SingleChildScrollView(
+                      child: Text("PKEPrivateKey{${data.base64}}")),
+                ),
               ),
             ),
           ),
@@ -458,7 +469,10 @@ class PKECipherVisualizer extends StatelessWidget {
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
-                child: Center(child: Text("Cipher{${data.base64}}")),
+                child: Center(
+                  child: SingleChildScrollView(
+                      child: Text("Cipher{${data.base64}}")),
+                ),
               ),
             ),
           ),
